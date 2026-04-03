@@ -1,0 +1,820 @@
+{
+  "id": "d98fb589-1bff-47eb-80c6-94eca50a4301",
+  "created_at": "2025-12-17T11:11:10.351221",
+  "updated_at": "2025-12-17T11:11:10.351221",
+  "data": {
+    "protocol_title": "fghjkl",
+    "protocol_number": "ghjkl;'",
+    "nct_number": "fdsarewdcxa",
+    "principal_investigator": "fec",
+    "sponsor": "ecsd",
+    "funded_by": "hbc",
+    "version_number": "dc",
+    "protocol_date": "2025-12-17",
+    "sections": {
+      "1": {
+        "main": "",
+        "title": "PROTOCOL SUMMARY",
+        "subsections": [
+          {
+            "title": "Synopsis",
+            "content": ""
+          },
+          {
+            "title": "Schema",
+            "content": ""
+          },
+          {
+            "title": "Schedule of Activities (SoA)",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "2": {
+        "main": "This section should include a diagram that provides a quick \u201csnapshot\u201d of the study and ideally be limited to 1 page. Below are examples of schematics that show the level of detail needed to convey an overview of the study design. Depending on the nature of your study, one example may be more appropriate than another.  Regardless, the examples included here are intended to guide the development of a schematic that is appropriate to the planned study design and will need to be customized for the protocol. Revise with study-specific information and adapt the diagram to illustrate your study design (e.g., changing method of assignment to study group, adding study arms, visits, etc.). The time point(s) indicated in the",
+        "title": "INTRODUCTION",
+        "subsections": [
+          {
+            "title": "Study Rationale",
+            "content": "State the problem or question (e.g., describe the population, disease, current standard of care, if one exists, and limitations of knowledge or available therapy) and the reason for conducting the clinical trial "
+          },
+          {
+            "title": "Background",
+            "content": "This section should include:  \n\nA summary of findings from nonclinical in vitro or in vivo studies that have potential clinical significance  \n\nA summary of relevant clinical research and any history of human use or exposure to the study intervention, including use in other countries, and clinical pharmacology studies \n\nDiscussion of important literature and data that are relevant to the trial and that provide background for the trial (reference citations should be listed in Section 11, References)  \n\nApplicable clinical, epidemiological, or public health background or context of the clinical trial \n\nImportance of the clinical trial and any relevant treatment issues or controversies  "
+          },
+          {
+            "title": "Risk/Benefit Assessment",
+            "content": "No text is to be entered in this section; rather it should be included under the relevant subheadings below. \n\n \n\nThe following subsections should include a discussion of known risks and benefits, if any, to human participants.   "
+          },
+          {
+            "title": "Known Potential Risks",
+            "content": "Include a discussion of known potential risks from either clinical or nonclinical studies.  If a package insert or device labeling from a licensed or approved product is available, it should be used as the primary source of risk information. If the product is investigational, the IB should be the primary source of the risk information. In addition, relevant published literature can also provide relevant risk information. If the risk profile cannot be described from the package insert, device labeling, or the IB, the risk information discussion will result from published literature and should be included and referenced appropriately.  \n\n \n\nDescribe any physical, psychological, social, legal, economic, or any other risks to participants by participating in the study that the Principal Investigator (PI) foresees, addressing each of the following:  \n\n \n\nImmediate risks  \n\nLong-range risks  \n\nIf risk is related to proposed procedures included in the protocol, describe alternative procedures that have been considered and explain why alternative procedures are not included"
+          },
+          {
+            "title": "Known Potential Benefits",
+            "content": "nclude a discussion of known potential benefits from either clinical or nonclinical studies.  If a package insert or device labeling from a licensed or approved product is available, it should be used as the primary source of potential benefit information. If the product is investigational, the IB should be the primary source of the potential benefit information. In addition, relevant published literature can also provide potential relevant benefit information. If the potential benefit cannot be described from the package insert, device labeling, or the IB, the potential benefit information discussion will result from published literature and should be included and referenced appropriately. \n\n \n\nDescribe any physical, psychological, social, legal, or any other potential benefits to individual participants or society in general, as a result of participating in the study, addressing each of the following:  \n\n \n\nImmediate potential benefits \n\nLong-range potential benefits \n\n \n\nNote that payment to participants, whether as an inducement to participate or as compensation for time and inconvenience, is not considered a \u201cbenefit.\u201d Provision of incidental care is also not to be considered a benefit. \n\n "
+          },
+          {
+            "title": "Assessment of Potential Risks and Benefits",
+            "content": "Include an assessment of known potential risks and benefits, addressing each of the following: \n\nRationale for the necessity of exposing participants to risks and a summary of the ways that risks to participants were minimized in the study design \n\nJustification as to why the risks of participation in the study outweigh the value of the information to be gained "
+          }
+        ],
+        "notes": ""
+      },
+      "3": {
+        "main": "",
+        "title": "OBJECTIVES AND ENDPOINTS",
+        "subsections": [],
+        "notes": ""
+      },
+      "4": {
+        "main": "For purposes of registration and reporting to ClinicalTrials.gov, the terms Objectives and Endpoints as used in this template align with the terms Primary Purpose and Outcome Measures in ClinicalTrials.gov, respectively. Provide a description of the study objectives and endpoints, as well as a justification for selecting the particular endpoints, in the table format included below.  This will provide clear articulation of how the selected primary and secondary endpoint(s) are linked to achieving the primary and secondary objectives and an explanation of why endpoint(s) were chosen. Data points collected in the study should support an objective or have a regulatory purpose.  Therefore, careful consideration should be given prospectively to the amount of data needed to support the study\u2019s objectives. \n\n \n\nAn objective is the purpose for performing the study in terms of the scientific question to be answered. Express each objective as a statement of purpose (e.g., to assess, to determine, to compare, to evaluate) and include the general purpose (e.g., efficacy, effectiveness, safety) and/or specific purpose (e.g., dose-response, superiority to placebo, effect of an intervention on disease incidence, disease severity, or health behavior).  ",
+        "title": "STUDY DESIGN",
+        "subsections": [
+          {
+            "title": "Overall Design",
+            "content": "Describe the rationale for the type and selection of control (e.g. placebo, active drug, dose-response, historical) and study design (e.g., non-inferiority as opposed to superiority). Discuss known or potential problems associated with the control group chosen in light of the specific disease and intervention(s) being studied. \n\n "
+          },
+          {
+            "title": "Scientific Rationale for Study Design",
+            "content": "Provide a justification for the route of administration, planned maximum dosage, and dosing regimen, including starting dose, of the study intervention(s) and control product(s).  "
+          },
+          {
+            "title": "Justification for Dose",
+            "content": "A clinical trial is considered completed when participants are no longer being examined or the last participant\u2019s last study visit has occurred.  "
+          },
+          {
+            "title": "End of Study Definition",
+            "content": "A clinical trial is considered completed when participants are no longer being examined or the last participant\u2019s last study visit has occurred.  "
+          }
+        ],
+        "notes": ""
+      },
+      "5": {
+        "main": "The following subsections should include a description of the study population and participant recruitment. The study population should be appropriate for clinical trial phase and the development stage of the study intervention.  Given the continuing challenges in achieving clinically relevant demographic inclusion in clinical trials, it is important to focus on clinically relevant potential participants at the earliest stages of protocol development.  Therefore, it is essential that the population\u2019s characteristics be considered during the trial planning phase to ensure the trial can adequately meet its objectives and provide evidence for the total population that will potentially utilize the study intervention under evaluation (e.g., elderly and pediatric populations, women, and minorities). \n\n \n\nUse the following guidelines when developing participant eligibility criteria to be listed in Sections 5.1 Inclusion Criteria and 5.2 Exclusion Criteria: \n\n \n\nThe eligibility criteria should provide a definition of participant characteristics required for study entry/enrollment.  \n\nIf participants require screening, distinguish between screening participants vs enrolling participants. Determine if screening procedures will be performed under a separate screening consent form. \n\nThe risks of the study intervention should be considered in the development of the inclusion/exclusion criteria so that risks are minimized. \n\nThe same criterion should not be listed as both an inclusion and exclusion criterion (e.g., do not state age >18 years old as an inclusion criterion and age \u226418 years old as an exclusion criterion). \n\nIdentify specific laboratory tests or clinical characteristics that will be used as criteria for enrollment or exclusion. \n\nIf reproductive status (e.g., pregnancy, lactation, reproductive potential) is an eligibility criterion, provide specific contraception requirements (e.g., licensed hormonal or barrier methods).  \n\nIf you have more than one study population, please define the common inclusion and exclusion criteria followed by the specific inclusion and exclusion criteria for each subpopulation.  ",
+        "title": "STUDY POPULATION",
+        "subsections": [
+          {
+            "title": "Inclusion Criteria",
+            "content": "Inclusion criteria are characteristics that define the population under study, e.g., those criteria that every potential participant must satisfy, to qualify for study entry. Provide a statement that individuals must meet all of the inclusion criteria in order to be eligible to participate in the study and then list each"
+          },
+          {
+            "title": "Exclusion Criteria",
+            "content": "Inclusion criteria are characteristics that define the population under study, e.g., those criteria that every potential participant must satisfy, to qualify for study entry. Provide a statement that individuals must meet all of the inclusion criteria in order to be eligible to participate in the study and then list each"
+          },
+          {
+            "title": "Lifestyle Considerations",
+            "content": ""
+          },
+          {
+            "title": "Screen Failures",
+            "content": ""
+          },
+          {
+            "title": "Strategies for Recruitment and Retention",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "6": {
+        "main": "",
+        "title": "STUDY INTERVENTION",
+        "subsections": [
+          {
+            "title": "Study Intervention(s) Administration",
+            "content": ""
+          },
+          {
+            "title": "Study Intervention Description",
+            "content": ""
+          },
+          {
+            "title": "Dosing and Administration",
+            "content": ""
+          },
+          {
+            "title": "Preparation/Handling/Storage/Accountability",
+            "content": ""
+          },
+          {
+            "title": "Acquisition and accountability",
+            "content": ""
+          },
+          {
+            "title": "Formulation, Appearance, Packaging, and Labeling",
+            "content": ""
+          },
+          {
+            "title": "Product Storage and Stability",
+            "content": ""
+          },
+          {
+            "title": "Preparation",
+            "content": ""
+          },
+          {
+            "title": "Measures to Minimize Bias: Randomization and Blinding",
+            "content": ""
+          },
+          {
+            "title": "Study Intervention Compliance",
+            "content": ""
+          },
+          {
+            "title": "Concomitant Therapy",
+            "content": ""
+          },
+          {
+            "title": "Rescue Medicine",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "7": {
+        "main": "",
+        "title": "STUDY INTERVENTION DISCONTINUATION AND PARTICIPANT DISCONTINUATION/WITHDRAWAL",
+        "subsections": [
+          {
+            "title": "Discontinuation of Study Intervention",
+            "content": ""
+          },
+          {
+            "title": "Participant Discontinuation/Withdrawal from the Study",
+            "content": ""
+          },
+          {
+            "title": "Lost to Follow-Up",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "8": {
+        "main": "",
+        "title": "STUDY ASSESSMENTS AND PROCEDURES",
+        "subsections": [
+          {
+            "title": "Efficacy Assessments",
+            "content": ""
+          },
+          {
+            "title": "Safety and Other Assessments",
+            "content": ""
+          },
+          {
+            "title": "Adverse Events and Serious Adverse Events",
+            "content": ""
+          },
+          {
+            "title": "Definition of Adverse Events (AE)",
+            "content": ""
+          },
+          {
+            "title": "Definition of Serious Adverse Events (SAE)",
+            "content": ""
+          },
+          {
+            "title": "Classification of an Adverse Event",
+            "content": ""
+          },
+          {
+            "title": "Time Period and Frequency for Event Assessment and Follow-Up",
+            "content": ""
+          },
+          {
+            "title": "Adverse Event Reporting",
+            "content": ""
+          },
+          {
+            "title": "Serious Adverse Event Reporting",
+            "content": ""
+          },
+          {
+            "title": "Reporting Events to Participants",
+            "content": ""
+          },
+          {
+            "title": "Events of Special Interest",
+            "content": ""
+          },
+          {
+            "title": "Reporting of Pregnancy",
+            "content": ""
+          },
+          {
+            "title": "Unanticipated Problems",
+            "content": ""
+          },
+          {
+            "title": "Definition of Unanticipated Problems (UP)",
+            "content": ""
+          },
+          {
+            "title": "Unanticipated Problem Reporting",
+            "content": ""
+          },
+          {
+            "title": "Reporting Unanticipated Problems to Participants",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "9": {
+        "main": "",
+        "title": "STATISTICAL CONSIDERATIONS",
+        "subsections": [
+          {
+            "title": "Statistical Hypotheses",
+            "content": ""
+          },
+          {
+            "title": "Sample Size Determination",
+            "content": ""
+          },
+          {
+            "title": "Populations for Analyses",
+            "content": ""
+          },
+          {
+            "title": "Statistical Analyses",
+            "content": ""
+          },
+          {
+            "title": "General Approach",
+            "content": ""
+          },
+          {
+            "title": "Analysis of the Primary Efficacy Endpoint(s)",
+            "content": ""
+          },
+          {
+            "title": "Analysis of the Secondary Endpoint(s)",
+            "content": ""
+          },
+          {
+            "title": "Safety Analyses",
+            "content": ""
+          },
+          {
+            "title": "Baseline Descriptive Statistics",
+            "content": ""
+          },
+          {
+            "title": "Planned Interim Analyses",
+            "content": ""
+          },
+          {
+            "title": "Sub-Group Analyses",
+            "content": ""
+          },
+          {
+            "title": "Tabulation of Individual participant Data",
+            "content": ""
+          },
+          {
+            "title": "Exploratory Analyses",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "10": {
+        "main": "",
+        "title": "SUPPORTING DOCUMENTATION AND OPERATIONAL CONSIDERATIONS",
+        "subsections": [
+          {
+            "title": "Regulatory, Ethical, and Study Oversight Considerations",
+            "content": ""
+          },
+          {
+            "title": "Informed Consent Process",
+            "content": ""
+          },
+          {
+            "title": "Study Discontinuation and Closure",
+            "content": ""
+          },
+          {
+            "title": "Confidentiality and Privacy",
+            "content": ""
+          },
+          {
+            "title": "Future Use of Stored Specimens and Data",
+            "content": ""
+          },
+          {
+            "title": "Key Roles and Study Governance",
+            "content": ""
+          },
+          {
+            "title": "Safety Oversight",
+            "content": ""
+          },
+          {
+            "title": "Clinical Monitoring",
+            "content": ""
+          },
+          {
+            "title": "Quality Assurance and Quality Control",
+            "content": ""
+          },
+          {
+            "title": "Data Handling and Record Keeping",
+            "content": ""
+          },
+          {
+            "title": "Protocol Deviations",
+            "content": ""
+          },
+          {
+            "title": "Publication and Data Sharing Policy",
+            "content": ""
+          },
+          {
+            "title": "Conflict of Interest Policy",
+            "content": ""
+          },
+          {
+            "title": "Additional Considerations",
+            "content": ""
+          },
+          {
+            "title": "Abbreviations",
+            "content": ""
+          },
+          {
+            "title": "Protocol Amendment History",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "11": {
+        "main": "",
+        "title": "REFERENCES",
+        "subsections": [],
+        "notes": ""
+      }
+    },
+    "synopsis": {
+      "Title": "jbjasx",
+      "Study Description": "dchbds",
+      "Objectives": "dsycbdc",
+      "Endpoints": "dasxubc",
+      "Study Population": "sucudsc",
+      "Phase": "csuhjhda",
+      "Sites/Facilities": "dxbjkd",
+      "Study Intervention Description": "edsugbuwc",
+      "Study Duration": "axujhnd",
+      "Participant Duration": "weubdc"
+    },
+    "schema_data": {
+      "image_url": null,
+      "images": [
+        {
+          "url": "/uploads/8680e99f-38c9-497c-9e7c-bee4dccf683c.jpg",
+          "caption": "ujhkj",
+          "description": "diskda"
+        },
+        {
+          "url": "/uploads/1e0ba9f4-97b0-459f-b5c3-3c2ea0156408.jpg",
+          "caption": "djbnda",
+          "description": "dauxjhkda"
+        }
+      ]
+    },
+    "section3": {
+      "description": "Include an assessment of known potential risks and benefits, addressing each of the following: \n\nRationale for the necessity of exposing participants to risks and a summary of the ways that risks to participants were minimized in the study design \n\nJustification as to why the risks of participation in the study outweigh the value of the information to be gained ",
+      "image": {
+        "url": null,
+        "caption": "ru",
+        "description": "reft"
+      },
+      "table": {
+        "headers": [
+          "Type",
+          "Objectives",
+          "Endpoints"
+        ],
+        "rows": [
+          [
+            "gyhj",
+            "uhjksdsdu",
+            "asgyd"
+          ],
+          [
+            "dhfd",
+            "wdyh",
+            "wdcu"
+          ],
+          [
+            "dyu",
+            "d",
+            "y"
+          ],
+          [
+            "dud",
+            "uwuyh",
+            "eieiy7r"
+          ]
+        ]
+      }
+    },
+    "soa_data": {
+      "table": {
+        "headers": [
+          "Screening",
+          "Enrollment/Baseline",
+          "Visit 1",
+          "Visit 2",
+          "Visit 3",
+          "Visit 4",
+          "Visit 5",
+          "Visit 6",
+          "Visit 7",
+          "Visit 8",
+          "Visit 9",
+          "Visit 10",
+          "Visit 11",
+          "Visit 12",
+          "Final Visit"
+        ],
+        "rows": {
+          "Informed consent": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Demographics": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Medical history": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Randomization": [
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Administer study intervention": [
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Concomitant medication review": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Physical exam": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Vital signs": [
+            false,
+            false,
+            false,
+            true,
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Height": [
+            true,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Weight": [
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Performance status": [
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Hematology": [
+            false,
+            true,
+            true,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Serum chemistry": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Pregnancy test": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "EKG": [
+            false,
+            true,
+            false,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Adverse event review": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Radiologic/Imaging": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Other assessments": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Complete CRFs": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        }
+      }
+    },
+    "objectives_endpoints": [],
+    "abbreviations": [],
+    "amendment_history": [],
+    "appendices": [],
+    "summary_changes": "",
+    "images": []
+  }
+}

@@ -1,0 +1,471 @@
+{
+  "id": "80ec3422-123a-42f8-b12a-69cbd4271b41",
+  "created_at": "2025-12-17T10:35:45.073631",
+  "updated_at": "2025-12-17T10:35:45.073631",
+  "data": {
+    "protocol_title": "itrgirt",
+    "protocol_number": "weuf",
+    "nct_number": "idcp",
+    "principal_investigator": "fiehbd",
+    "sponsor": "yudsus",
+    "funded_by": "dhivs",
+    "version_number": "v1.0",
+    "protocol_date": "2025-12-17",
+    "sections": {
+      "1": {
+        "main": "No text is to be entered in this section; rather it should be included under the relevant subheadings below. ",
+        "title": "PROTOCOL SUMMARY",
+        "subsections": [
+          {
+            "title": "1.1 Synopsis",
+            "content": ""
+          },
+          {
+            "title": "1.2 Schema",
+            "content": ""
+          },
+          {
+            "title": "1.3 Schedule of Activities (SoA)",
+            "content": ""
+          },
+          {
+            "title": "Protocol Subsection",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "2": {
+        "main": "",
+        "title": "INTRODUCTION",
+        "subsections": [
+          {
+            "title": "2.1 Study Rationale",
+            "content": ""
+          },
+          {
+            "title": "2.2 Background",
+            "content": ""
+          },
+          {
+            "title": "2.3 Risk/Benefit Assessment",
+            "content": ""
+          },
+          {
+            "title": "2.3.2 Known Potential Benefits",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "3": {
+        "main": "",
+        "title": "OBJECTIVES AND ENDPOINTS",
+        "subsections": [],
+        "notes": ""
+      },
+      "4": {
+        "main": "",
+        "title": "STUDY DESIGN",
+        "subsections": [
+          {
+            "title": "4.1 Overall Design",
+            "content": ""
+          },
+          {
+            "title": "4.2 Scientific Rationale for Study Design",
+            "content": ""
+          },
+          {
+            "title": "4.3 Justification for Dose",
+            "content": ""
+          },
+          {
+            "title": "4.4 End of Study Definition",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "5": {
+        "main": "",
+        "title": "STUDY POPULATION",
+        "subsections": [
+          {
+            "title": "5.1 Inclusion Criteria",
+            "content": ""
+          },
+          {
+            "title": "5.2 Exclusion Criteria",
+            "content": ""
+          },
+          {
+            "title": "5.3 Lifestyle Considerations",
+            "content": ""
+          },
+          {
+            "title": "5.4 Screen Failures",
+            "content": ""
+          },
+          {
+            "title": "5.5 Strategies for Recruitment and Retention",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "6": {
+        "main": "",
+        "title": "STUDY INTERVENTION",
+        "subsections": [
+          {
+            "title": "6.1 Study Intervention(s) Administration",
+            "content": ""
+          },
+          {
+            "title": "6.1.1 Study Intervention Description",
+            "content": ""
+          },
+          {
+            "title": "6.1.2 Dosing and Administration",
+            "content": ""
+          },
+          {
+            "title": "6.2 Preparation/Handling/Storage/Accountability",
+            "content": ""
+          },
+          {
+            "title": "6.2.1 Acquisition and accountability",
+            "content": ""
+          },
+          {
+            "title": "6.2.2 Formulation, Appearance, Packaging, and Labeling",
+            "content": ""
+          },
+          {
+            "title": "6.2.3 Product Storage and Stability",
+            "content": ""
+          },
+          {
+            "title": "6.2.4 Preparation",
+            "content": ""
+          },
+          {
+            "title": "6.3 Measures to Minimize Bias: Randomization and Blinding",
+            "content": ""
+          },
+          {
+            "title": "6.4 Study Intervention Compliance",
+            "content": ""
+          },
+          {
+            "title": "6.5 Concomitant Therapy",
+            "content": ""
+          },
+          {
+            "title": "6.5.1 Rescue Medicine",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "7": {
+        "main": "",
+        "title": "STUDY INTERVENTION DISCONTINUATION AND PARTICIPANT DISCONTINUATION/WITHDRAWAL",
+        "subsections": [
+          {
+            "title": "7.1 Discontinuation of Study Intervention",
+            "content": ""
+          },
+          {
+            "title": "7.2 Participant Discontinuation/Withdrawal from the Study",
+            "content": ""
+          },
+          {
+            "title": "7.3 Lost to Follow-Up",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "8": {
+        "main": "",
+        "title": "STUDY ASSESSMENTS AND PROCEDURES",
+        "subsections": [
+          {
+            "title": "8.1 Efficacy Assessments",
+            "content": ""
+          },
+          {
+            "title": "8.2 Safety and Other Assessments",
+            "content": ""
+          },
+          {
+            "title": "8.3 Adverse Events and Serious Adverse Events",
+            "content": ""
+          },
+          {
+            "title": "8.3.1 Definition of Adverse Events (AE)",
+            "content": ""
+          },
+          {
+            "title": "8.3.2 Definition of Serious Adverse Events (SAE)",
+            "content": ""
+          },
+          {
+            "title": "8.3.3 Classification of an Adverse Event",
+            "content": ""
+          },
+          {
+            "title": "8.3.4 Time Period and Frequency for Event Assessment and Follow-Up",
+            "content": ""
+          },
+          {
+            "title": "8.3.5 Adverse Event Reporting",
+            "content": ""
+          },
+          {
+            "title": "8.3.6 Serious Adverse Event Reporting",
+            "content": ""
+          },
+          {
+            "title": "8.3.7 Reporting Events to Participants",
+            "content": ""
+          },
+          {
+            "title": "8.3.8 Events of Special Interest",
+            "content": ""
+          },
+          {
+            "title": "8.3.9 Reporting of Pregnancy",
+            "content": ""
+          },
+          {
+            "title": "8.4 Unanticipated Problems",
+            "content": ""
+          },
+          {
+            "title": "8.4.1 Definition of Unanticipated Problems (UP)",
+            "content": ""
+          },
+          {
+            "title": "8.4.2 Unanticipated Problem Reporting",
+            "content": ""
+          },
+          {
+            "title": "8.4.3 Reporting Unanticipated Problems to Participants",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "9": {
+        "main": "",
+        "title": "STATISTICAL CONSIDERATIONS",
+        "subsections": [
+          {
+            "title": "9.1 Statistical Hypotheses",
+            "content": ""
+          },
+          {
+            "title": "9.2 Sample Size Determination",
+            "content": ""
+          },
+          {
+            "title": "9.3 Populations for Analyses",
+            "content": ""
+          },
+          {
+            "title": "9.4 Statistical Analyses",
+            "content": ""
+          },
+          {
+            "title": "9.4.1 General Approach",
+            "content": ""
+          },
+          {
+            "title": "9.4.2 Analysis of the Primary Efficacy Endpoint(s)",
+            "content": ""
+          },
+          {
+            "title": "9.4.3 Analysis of the Secondary Endpoint(s)",
+            "content": ""
+          },
+          {
+            "title": "9.4.4 Safety Analyses",
+            "content": ""
+          },
+          {
+            "title": "9.4.5 Baseline Descriptive Statistics",
+            "content": ""
+          },
+          {
+            "title": "9.4.6 Planned Interim Analyses",
+            "content": ""
+          },
+          {
+            "title": "9.4.7 Sub-Group Analyses",
+            "content": ""
+          },
+          {
+            "title": "9.4.8 Tabulation of Individual participant Data",
+            "content": ""
+          },
+          {
+            "title": "9.4.9 Exploratory Analyses",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "10": {
+        "main": "",
+        "title": "SUPPORTING DOCUMENTATION AND OPERATIONAL CONSIDERATIONS",
+        "subsections": [
+          {
+            "title": "10.1 Regulatory, Ethical, and Study Oversight Considerations",
+            "content": ""
+          },
+          {
+            "title": "10.1.1 Informed Consent Process",
+            "content": ""
+          },
+          {
+            "title": "10.1.2 Study Discontinuation and Closure",
+            "content": ""
+          },
+          {
+            "title": "10.1.3 Confidentiality and Privacy",
+            "content": ""
+          },
+          {
+            "title": "10.1.4 Future Use of Stored Specimens and Data",
+            "content": ""
+          },
+          {
+            "title": "10.1.5 Key Roles and Study Governance",
+            "content": ""
+          },
+          {
+            "title": "10.1.6 Safety Oversight",
+            "content": ""
+          },
+          {
+            "title": "10.1.7 Clinical Monitoring",
+            "content": ""
+          },
+          {
+            "title": "10.1.8 Quality Assurance and Quality Control",
+            "content": ""
+          },
+          {
+            "title": "10.1.9 Data Handling and Record Keeping",
+            "content": ""
+          },
+          {
+            "title": "10.1.10 Protocol Deviations",
+            "content": ""
+          },
+          {
+            "title": "10.1.11 Publication and Data Sharing Policy",
+            "content": ""
+          },
+          {
+            "title": "10.1.12 Conflict of Interest Policy",
+            "content": ""
+          },
+          {
+            "title": "10.2 Additional Considerations",
+            "content": ""
+          },
+          {
+            "title": "10.3 Abbreviations",
+            "content": ""
+          },
+          {
+            "title": "10.4 Protocol Amendment History",
+            "content": ""
+          }
+        ],
+        "notes": ""
+      },
+      "11": {
+        "main": "",
+        "title": "REFERENCES",
+        "subsections": [],
+        "notes": ""
+      }
+    },
+    "synopsis": {
+      "Title": "iojapija",
+      "Study Description": "sdhoihs",
+      "Objectives": "iowhsd",
+      "Endpoints": "dcusd",
+      "Study Population": "asugsd",
+      "Phase": "adjds",
+      "Sites/Facilities": "sdkjc",
+      "Study Intervention Description": "akfdhf",
+      "Study Duration": "wdjsdsduf",
+      "Participant Duration": "sdif"
+    },
+    "schema_data": {
+      "image_url": "/uploads/63ad75ea-aa7d-4553-84b1-782a52438d5d.png",
+      "images": [
+        {
+          "url": "/uploads/4f4da6b9-a532-4934-a80e-378656602e67.png",
+          "description": "Hello"
+        },
+        {
+          "url": "/uploads/5468d960-b71e-4292-b7f9-e160e14140c4.jpg",
+          "description": "uhwdouids"
+        }
+      ],
+      "caption": "fuhudsc",
+      "description": "efujhuvf"
+    },
+    "section3": {
+      "description": "ujhnoufshnolnrlskdcjifsjp;sjprwjp;rw",
+      "image": {
+        "url": null,
+        "caption": "",
+        "description": ""
+      },
+      "table": {
+        "headers": [
+          "Type",
+          "Objectives",
+          "Endpoints"
+        ],
+        "rows": [
+          [
+            "wfuows",
+            "edjiwaeo",
+            "edihnipea"
+          ],
+          [
+            "wedinoiwe",
+            "weduhnweoif",
+            "wdiniwepf"
+          ],
+          [
+            "ewinois",
+            "wdnciowncrwe",
+            "wejnrferf"
+          ],
+          [
+            "awfiurf",
+            "waeiuhnrsoi",
+            "qedursfnrf"
+          ]
+        ]
+      }
+    },
+    "soa_data": {},
+    "objectives_endpoints": [],
+    "abbreviations": [],
+    "amendment_history": [],
+    "appendices": [],
+    "summary_changes": "",
+    "images": []
+  }
+}

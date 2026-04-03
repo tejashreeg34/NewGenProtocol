@@ -1,0 +1,40 @@
+{
+  "default": {
+    "protocol_title": { "severity": "Mandatory", "type": "field" },
+    "protocol_number": { "severity": "Mandatory", "type": "field" },
+    "sponsor": { "severity": "Optional", "type": "field" },
+    "sections": {
+      "1": {
+        "title": "PROTOCOL SUMMARY",
+        "subsections": [
+          { "title": "Synopsis", "severity": "Mandatory", "type": "content" },
+          { "title": "Schema", "severity": "Optional", "type": "content" },
+          { "title": "Schedule of Activities (SoA)", "severity": "Mandatory", "type": "content" }
+        ],
+        "images": { "severity": "Optional", "type": "list" }
+      },
+      "2": {
+        "title": "INTRODUCTION",
+        "subsections": [
+          { "title": "Study Rationale", "severity": "Mandatory", "type": "content" },
+          { "title": "Background", "severity": "Mandatory", "type": "content" }
+        ]
+      },
+      "3": {
+        "title": "OBJECTIVES AND ENDPOINTS",
+        "items": { "severity": "Mandatory", "type": "list" }
+      },
+      "5": {
+        "title": "STUDY POPULATION",
+        "subsections": [
+          { "title": "Inclusion Criteria", "severity": "Mandatory", "type": "points" },
+          { "title": "Exclusion Criteria", "severity": "Mandatory", "type": "points" }
+        ]
+      }
+    },
+    "synopsis_data": {
+      "objectives": { "severity": "Mandatory", "type": "list" },
+      "endpoints": { "severity": "Mandatory", "type": "list" }
+    }
+  }
+}

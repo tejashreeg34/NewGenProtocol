@@ -1,0 +1,857 @@
+{
+  "id": "9fa5ed85-1431-48a1-8f11-a78f2539043a",
+  "created_at": "2026-03-04T16:31:00.286067",
+  "updated_at": "2026-03-04T16:31:00.286104",
+  "data": {
+    "id": null,
+    "protocol_title": "ONcology protocols",
+    "protocol_number": "proto 001",
+    "nct_number": "",
+    "principal_investigator": "",
+    "sponsor": "sponsor",
+    "funded_by": "",
+    "version_number": "",
+    "protocol_date": "2026-03-04",
+    "sections": {
+      "1": {
+        "main": "",
+        "title": "PROTOCOL SUMMARY",
+        "subsections": [
+          {
+            "title": "Synopsis",
+            "content": ""
+          },
+          {
+            "title": "Schema",
+            "content": ""
+          },
+          {
+            "title": "Schedule of Activities (SoA)",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "2": {
+        "main": "",
+        "title": "INTRODUCTION",
+        "subsections": [
+          {
+            "title": "Study Rationale",
+            "content": ""
+          },
+          {
+            "title": "Background",
+            "content": ""
+          },
+          {
+            "title": "Risk/Benefit Assessment",
+            "content": ""
+          },
+          {
+            "title": "Known Potential Risks",
+            "content": ""
+          },
+          {
+            "title": "Known Potential Benefits",
+            "content": ""
+          },
+          {
+            "title": "Assessment of Potential Risks and Benefits",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "3": {
+        "main": "",
+        "title": "OBJECTIVES AND ENDPOINTS",
+        "subsections": [],
+        "notes": "",
+        "images": []
+      },
+      "4": {
+        "main": "",
+        "title": "STUDY DESIGN",
+        "subsections": [
+          {
+            "title": "Overall Design",
+            "content": ""
+          },
+          {
+            "title": "Scientific Rationale for Study Design",
+            "content": ""
+          },
+          {
+            "title": "Justification for Dose",
+            "content": ""
+          },
+          {
+            "title": "End of Study Definition",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "5": {
+        "main": "",
+        "title": "STUDY POPULATION",
+        "subsections": [
+          {
+            "title": "Inclusion Criteria",
+            "content": ""
+          },
+          {
+            "title": "Exclusion Criteria",
+            "content": ""
+          },
+          {
+            "title": "Lifestyle Considerations",
+            "content": ""
+          },
+          {
+            "title": "Screen Failures",
+            "content": ""
+          },
+          {
+            "title": "Strategies for Recruitment and Retention",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "6": {
+        "main": "",
+        "title": "STUDY INTERVENTION",
+        "subsections": [
+          {
+            "title": "Study Intervention(s) Administration",
+            "content": ""
+          },
+          {
+            "title": "Study Intervention Description",
+            "content": ""
+          },
+          {
+            "title": "Dosing and Administration",
+            "content": ""
+          },
+          {
+            "title": "Preparation/Handling/Storage/Accountability",
+            "content": ""
+          },
+          {
+            "title": "Acquisition and accountability",
+            "content": ""
+          },
+          {
+            "title": "Formulation, Appearance, Packaging, and Labeling",
+            "content": ""
+          },
+          {
+            "title": "Product Storage and Stability",
+            "content": ""
+          },
+          {
+            "title": "Preparation",
+            "content": ""
+          },
+          {
+            "title": "Measures to Minimize Bias: Randomization and Blinding",
+            "content": ""
+          },
+          {
+            "title": "Study Intervention Compliance",
+            "content": ""
+          },
+          {
+            "title": "Concomitant Therapy",
+            "content": ""
+          },
+          {
+            "title": "Rescue Medicine",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "7": {
+        "main": "",
+        "title": "STUDY INTERVENTION DISCONTINUATION AND PARTICIPANT DISCONTINUATION/WITHDRAWAL",
+        "subsections": [
+          {
+            "title": "Discontinuation of Study Intervention",
+            "content": ""
+          },
+          {
+            "title": "Participant Discontinuation/Withdrawal from the Study",
+            "content": ""
+          },
+          {
+            "title": "Lost to Follow-Up",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "8": {
+        "main": "",
+        "title": "STUDY ASSESSMENTS AND PROCEDURES",
+        "subsections": [
+          {
+            "title": "Efficacy Assessments",
+            "content": ""
+          },
+          {
+            "title": "Safety and Other Assessments",
+            "content": ""
+          },
+          {
+            "title": "Adverse Events and Serious Adverse Events",
+            "content": ""
+          },
+          {
+            "title": "Definition of Adverse Events (AE)",
+            "content": ""
+          },
+          {
+            "title": "Definition of Serious Adverse Events (SAE)",
+            "content": ""
+          },
+          {
+            "title": "Classification of an Adverse Event",
+            "content": ""
+          },
+          {
+            "title": "Time Period and Frequency for Event Assessment and Follow-Up",
+            "content": ""
+          },
+          {
+            "title": "Adverse Event Reporting",
+            "content": ""
+          },
+          {
+            "title": "Serious Adverse Event Reporting",
+            "content": ""
+          },
+          {
+            "title": "Reporting Events to Participants",
+            "content": ""
+          },
+          {
+            "title": "Events of Special Interest",
+            "content": ""
+          },
+          {
+            "title": "Reporting of Pregnancy",
+            "content": ""
+          },
+          {
+            "title": "Unanticipated Problems",
+            "content": ""
+          },
+          {
+            "title": "Definition of Unanticipated Problems (UP)",
+            "content": ""
+          },
+          {
+            "title": "Unanticipated Problem Reporting",
+            "content": ""
+          },
+          {
+            "title": "Reporting Unanticipated Problems to Participants",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "9": {
+        "main": "",
+        "title": "STATISTICAL CONSIDERATIONS",
+        "subsections": [
+          {
+            "title": "Statistical Hypotheses",
+            "content": ""
+          },
+          {
+            "title": "Sample Size Determination",
+            "content": ""
+          },
+          {
+            "title": "Populations for Analyses",
+            "content": ""
+          },
+          {
+            "title": "Statistical Analyses",
+            "content": ""
+          },
+          {
+            "title": "General Approach",
+            "content": ""
+          },
+          {
+            "title": "Analysis of the Primary Efficacy Endpoint(s)",
+            "content": ""
+          },
+          {
+            "title": "Analysis of the Secondary Endpoint(s)",
+            "content": ""
+          },
+          {
+            "title": "Safety Analyses",
+            "content": ""
+          },
+          {
+            "title": "Baseline Descriptive Statistics",
+            "content": ""
+          },
+          {
+            "title": "Planned Interim Analyses",
+            "content": ""
+          },
+          {
+            "title": "Sub-Group Analyses",
+            "content": ""
+          },
+          {
+            "title": "Tabulation of Individual participant Data",
+            "content": ""
+          },
+          {
+            "title": "Exploratory Analyses",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "10": {
+        "main": "",
+        "title": "SUPPORTING DOCUMENTATION AND OPERATIONAL CONSIDERATIONS",
+        "subsections": [
+          {
+            "title": "Regulatory, Ethical, and Study Oversight Considerations",
+            "content": ""
+          },
+          {
+            "title": "Informed Consent Process",
+            "content": ""
+          },
+          {
+            "title": "Study Discontinuation and Closure",
+            "content": ""
+          },
+          {
+            "title": "Confidentiality and Privacy",
+            "content": ""
+          },
+          {
+            "title": "Future Use of Stored Specimens and Data",
+            "content": ""
+          },
+          {
+            "title": "Key Roles and Study Governance",
+            "content": ""
+          },
+          {
+            "title": "Safety Oversight",
+            "content": ""
+          },
+          {
+            "title": "Clinical Monitoring",
+            "content": ""
+          },
+          {
+            "title": "Quality Assurance and Quality Control",
+            "content": ""
+          },
+          {
+            "title": "Data Handling and Record Keeping",
+            "content": ""
+          },
+          {
+            "title": "Protocol Deviations",
+            "content": ""
+          },
+          {
+            "title": "Publication and Data Sharing Policy",
+            "content": ""
+          },
+          {
+            "title": "Conflict of Interest Policy",
+            "content": ""
+          },
+          {
+            "title": "Additional Considerations",
+            "content": ""
+          },
+          {
+            "title": "Abbreviations",
+            "content": ""
+          },
+          {
+            "title": "Protocol Amendment History",
+            "content": ""
+          }
+        ],
+        "notes": "",
+        "images": []
+      },
+      "11": {
+        "main": "",
+        "title": "REFERENCES",
+        "subsections": [],
+        "notes": "",
+        "images": []
+      }
+    },
+    "synopsis": {},
+    "synopsis_data": {
+      "overview": {
+        "title": "",
+        "coordinating_investigator": "",
+        "expert_committee": "",
+        "investigators": "",
+        "trial_sites": "",
+        "planned_period": "",
+        "fpfv": "",
+        "lplv": "",
+        "clinical_phase": ""
+      },
+      "objectives": {
+        "primary": [],
+        "secondary": [],
+        "exploratory": []
+      },
+      "endpoints": {
+        "primary": [],
+        "secondary": [],
+        "exploratory": []
+      },
+      "flowcharts": [],
+      "num_patients": "",
+      "inclusion": {
+        "text": "",
+        "points": []
+      },
+      "exclusion": {
+        "text": "",
+        "points": []
+      },
+      "team": {
+        "investigator_desc": "",
+        "coordinator_desc": ""
+      },
+      "tables": [],
+      "statistical_methods": ""
+    },
+    "approval_data": {
+      "details": {
+        "protocol_name": "",
+        "protocol_number": "",
+        "imp": "",
+        "indication": "",
+        "clinical_phase": "",
+        "investigators": "",
+        "coordinating_investigator": "",
+        "expert_committee": "",
+        "sponsor_name_address": "",
+        "gcp_statement": "",
+        "approval_statement": ""
+      },
+      "sponsor_reps": [],
+      "cro_reps": [],
+      "investigator_agreement": {
+        "description": "",
+        "signature": null,
+        "name": "",
+        "title": "",
+        "facility": "",
+        "city": "",
+        "state": "",
+        "date": ""
+      },
+      "amendments": []
+    },
+    "schema_data": {
+      "images": []
+    },
+    "section3": {
+      "description": "",
+      "image": {
+        "url": null,
+        "caption": "",
+        "description": ""
+      },
+      "table": {
+        "headers": [
+          "Type",
+          "Objectives",
+          "Endpoints"
+        ],
+        "rows": []
+      }
+    },
+    "soa_data": {
+      "table": {
+        "headers": [
+          "Screening",
+          "Enrollment/Baseline",
+          "Visit 1",
+          "Visit 2",
+          "Visit 3",
+          "Visit 4",
+          "Visit 5",
+          "Visit 6",
+          "Visit 7",
+          "Visit 8",
+          "Visit 9",
+          "Visit 10",
+          "Visit 11",
+          "Visit 12",
+          "Final Visit"
+        ],
+        "rows": {
+          "Informed consent": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Demographics": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Medical history": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Randomization": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Administer study intervention": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Concomitant medication review": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Physical exam": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Vital signs": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Height": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Weight": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Performance status": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Hematology": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Serum chemistry": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Pregnancy test": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "EKG": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Adverse event review": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Radiologic/Imaging": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Other assessments": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ],
+          "Complete CRFs": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        }
+      }
+    },
+    "objectives_endpoints": [],
+    "abbreviations": [],
+    "amendment_history": [],
+    "appendices": [],
+    "summary_changes": "",
+    "images": [],
+    "protocolTitle": "ONcology protocols",
+    "protocolNumber": "proto 001"
+  }
+}
