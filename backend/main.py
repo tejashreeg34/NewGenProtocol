@@ -115,6 +115,8 @@ class SynopsisData(BaseProtocolModel):
     team: SynopsisTeam = SynopsisTeam()
     tables: List[Any] = []
     statistical_methods: Optional[str] = ""
+    flowchart_title: Optional[str] = ""
+    flowchart_description: Optional[str] = ""
 
 class ProtocolData(BaseProtocolModel):
     id: Optional[str] = None
@@ -152,11 +154,40 @@ class ProtocolData(BaseProtocolModel):
     summary_changes: Optional[str] = ""
     images: Optional[List[Dict[str, Any]]] = []
 
-class QCReportItem(BaseProtocolModel):
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class QCReportItem(BaseModel):
     section_name: str
     missing_item: str
     severity: str
     status: str = "Pending"
+
+@app.post("/api/login")
+async def login(data: LoginRequest):
+    try:
+        # For this demo/trial, we use direct password comparison. 
+        # In production, we would use bcrypt/argon2 hashing.
+        query = "SELECT user_id, username, full_name, email, status FROM users WHERE username = %s AND password = %s"
+        users = execute_query(query, (data.username, data.password), fetch=True)
+        
+        if users:
+            user = users[0]
+            # Update last login
+            execute_query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = %s", (user['user_id'],))
+            return {
+                "status": "success",
+                "message": "Login successful",
+                "user": user
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error during login")
 
 @app.on_event("startup")
 async def startup_event():

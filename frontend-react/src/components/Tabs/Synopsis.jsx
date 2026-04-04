@@ -131,12 +131,9 @@ const Synopsis = () => {
             <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border-color)' }}></div>
             <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.7rem' }}>CLINICAL OVERVIEW</span>
           </div>
-          <h2 style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>Patient Synopsis</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '4px' }}>Consolidated clinical framework for trial execution and regulatory review.</p>
+          <h2 className="page-title">Patient Synopsis</h2>
+          <p className="page-subtitle">Consolidated clinical framework for trial execution and regulatory review.</p>
         </div>
-        <button className="btn btn-primary" style={{ padding: '12px 28px', borderRadius: '16px', boxShadow: '0 8px 24px rgba(50, 205, 50, 0.2)' }} onClick={() => toast.success('Synopsis data synchronized')}>
-          <Save size={18} /> Save Synopsis
-        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -339,6 +336,29 @@ const Synopsis = () => {
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Visual representation of trial procedures and schedule.</p>
              </div>
           </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '32px' }}>
+            <div className="form-group">
+              <label>FLOWCHART TITLE</label>
+              <input 
+                className="form-input" 
+                value={synopsis.flowchart_title || ''} 
+                onChange={(e) => handleFieldChange(['flowchart_title'], e.target.value)}
+                placeholder="e.g., Trial Design and Procedures Flowchart"
+              />
+            </div>
+            <div className="form-group">
+              <label>FLOWCHART DESCRIPTION</label>
+              <textarea 
+                className="form-input" 
+                rows={3}
+                value={synopsis.flowchart_description || ''} 
+                onChange={(e) => handleFieldChange(['flowchart_description'], e.target.value)}
+                placeholder="Detailed description of the flowchart sequence and milestones..."
+              />
+            </div>
+          </div>
+
           <div style={{ padding: '32px', border: '2px dashed var(--border-color)', borderRadius: '20px', textAlign: 'center', background: 'var(--bg-gray)' }}>
             {synopsis.flowchart ? (
                <div style={{ position: 'relative', display: 'inline-block' }}>

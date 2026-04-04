@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Table as TableIcon, Plus, Trash2, Image as ImageIcon, 
   UploadCloud, X, Save, AlertTriangle, ChevronRight, 
-  ChevronDown, Settings2, Grid, RefreshCw, Eraser, FileSpreadsheet
+  ChevronDown, Settings2, Grid, RefreshCw, Eraser, FileSpreadsheet,
+  AlertCircle
 } from 'lucide-react';
 import { useProtocol } from '../../context/ProtocolContext';
 import toast from 'react-hot-toast';
@@ -30,7 +31,7 @@ const DEFAULT_PROCEDURES = [
 ];
 
 const ScheduleOfActivities = () => {
-  const { data, updateNestedField } = useProtocol();
+  const { data, updateNestedField, openModal } = useProtocol();
   const [colCount, setColCount] = useState(5);
   const [rowCount, setRowCount] = useState(5);
   const [showConfig, setShowConfig] = useState(false);
@@ -45,17 +46,24 @@ const ScheduleOfActivities = () => {
 
   useEffect(() => {
     if (rawTable.rows && !Array.isArray(rawTable.rows)) {
-        const newRows = Object.entries(rawTable.rows).map(([proc, checks]) => {
-            return [proc, ...checks.map(c => c ? "X" : "")];
-        });
-        
+        const newRows = Object.entries(rawTable.rows).map(([proc, checks]) => [proc, ...checks.map(c => c ? "X" : "")]);
         let newHeaders = rawTable.headers || [];
-        if (newHeaders[0] !== "Procedure") {
-             newHeaders = ["Procedure", ...newHeaders];
-        }
+        if (newHeaders[0] !== "Procedure") newHeaders = ["Procedure", ...newHeaders];
         updateNestedField(['soa_data', 'table'], { headers: newHeaders, rows: newRows });
     }
   }, [rawTable.rows]);
+
+  const getNextVisitName = () => {
+    let maxVisitNum = 0;
+    table.headers.forEach(h => {
+      const match = h.match(/Visit\s*(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxVisitNum) maxVisitNum = num;
+      }
+    });
+    return `Visit ${maxVisitNum + 1}`;
+  };
 
   const handleHeaderChange = (index, value) => {
     const newHeaders = [...table.headers];
@@ -71,50 +79,82 @@ const ScheduleOfActivities = () => {
   };
 
   const addColumn = () => {
-    const name = prompt("Enter Column Header Name:", `Visit ${table.headers.length}`);
-    if (name) {
-      const newHeaders = [...table.headers, name];
-      const newRows = table.rows.map(row => [...row, ""]);
-      updateNestedField(['soa_data', 'table'], { headers: newHeaders, rows: newRows });
-      toast.success('Column added');
-    }
+    const newHeaders = [...table.headers, ""];
+    const newRows = table.rows.map(row => [...row, "0"]);
+    updateNestedField(['soa_data', 'table'], { headers: newHeaders, rows: newRows });
+    toast.success('Column added');
+  };
+
+  const insertColumnAfter = (index) => {
+    const newHeaders = [...table.headers];
+    newHeaders.splice(index + 1, 0, "");
+    const newRows = table.rows.map(row => {
+      const nr = [...row];
+      nr.splice(index + 1, 0, "0"); 
+      return nr;
+    });
+    updateNestedField(['soa_data', 'table'], { headers: newHeaders, rows: newRows });
+    toast.success('Column added');
   };
 
   const addRow = () => {
-    const newRow = new Array(table.headers.length).fill("");
+    const newRow = new Array(table.headers.length).fill("0");
+    newRow[0] = ""; 
     const newRows = [...table.rows, newRow];
     updateNestedField(['soa_data', 'table', 'rows'], newRows);
     toast.success('Row added');
   };
 
+  const insertRowAfter = (index) => {
+    const newRow = new Array(table.headers.length).fill("0");
+    newRow[0] = "";
+    const newRows = [...table.rows];
+    newRows.splice(index + 1, 0, newRow);
+    updateNestedField(['soa_data', 'table', 'rows'], newRows);
+    toast.success('Row added');
+  };
+
   const deleteColumn = (index) => {
-    if (!window.confirm("Delete this column and all its data?")) return;
-    const newHeaders = table.headers.filter((_, i) => i !== index);
-    const newRows = table.rows.map(row => row.filter((_, i) => i !== index));
-    updateNestedField(['soa_data', 'table'], { headers: newHeaders, rows: newRows });
+    if (index === 0) return;
+    openModal({
+      title: 'Delete Column?',
+      message: `Are you sure you want to delete "${table.headers[index] || 'this column'}"? All visit data in this column will be lost.`,
+      icon: 'trash',
+      onConfirm: () => {
+        const newHeaders = table.headers.filter((_, i) => i !== index);
+        const newRows = table.rows.map(row => row.filter((_, i) => i !== index));
+        updateNestedField(['soa_data', 'table'], { headers: newHeaders, rows: newRows });
+        toast.success('Column deleted');
+      }
+    });
   };
 
   const deleteRow = (index) => {
-    if (!window.confirm("Delete this row?")) return;
-    const newRows = table.rows.filter((_, i) => i !== index);
-    updateNestedField(['soa_data', 'table', 'rows'], newRows);
+    openModal({
+      title: 'Delete Row?',
+      message: `Are you sure you want to delete "${table.rows[index][0] || 'this row'}"? This action cannot be undone.`,
+      icon: 'trash',
+      onConfirm: () => {
+        const newRows = table.rows.filter((_, i) => i !== index);
+        updateNestedField(['soa_data', 'table', 'rows'], newRows);
+        toast.success('Row deleted');
+      }
+    });
   };
 
   const generateInitialTable = () => {
-    if (table.rows.length > 0 && !window.confirm("Replace current table? Data will be lost.")) return;
     const headers = ["Procedure"];
     for(let i=1; i<colCount; i++) headers.push(`Visit ${i}`);
     const rows = [];
-    for(let r=0; r<rowCount; r++) rows.push(new Array(colCount).fill(""));
+    for(let r=0; r<rowCount; r++) rows.push(new Array(colCount).fill("0"));
     updateNestedField(['soa_data', 'table'], { headers, rows });
     setShowConfig(false);
     toast.success('Grid generated');
   };
 
   const applyTemplate = () => {
-    if (table.rows.length > 0 && !window.confirm("Apply clinical template? This will replace your current table.")) return;
     const rows = DEFAULT_PROCEDURES.map(proc => {
-       const row = new Array(DEFAULT_HEADERS.length).fill("");
+       const row = new Array(DEFAULT_HEADERS.length).fill("0");
        row[0] = proc;
        return row;
     });
@@ -123,9 +163,15 @@ const ScheduleOfActivities = () => {
   };
 
   const clearTable = () => {
-    if (window.confirm("Clear all rows and columns?")) {
-      updateNestedField(['soa_data', 'table'], { headers: ["Procedure"], rows: [] });
-    }
+    openModal({
+      title: 'Clear Table?',
+      message: 'Are you sure you want to clear all rows and columns? This action is irreversible.',
+      icon: 'trash',
+      onConfirm: () => {
+        updateNestedField(['soa_data', 'table'], { headers: ["Procedure"], rows: [] });
+        toast.success('Table cleared');
+      }
+    });
   };
 
   const handleFileUpload = async (e) => {
@@ -143,7 +189,7 @@ const ScheduleOfActivities = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px', position: 'relative' }}>
       
       {/* 1. OPERATIONS HUB - Consolidated Controls */}
       <section className="card" style={{ padding: '24px' }}>
@@ -153,6 +199,10 @@ const ScheduleOfActivities = () => {
              <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>SoA Operations Hub</h4>
            </div>
            <div style={{ display: 'flex', gap: '12px' }}>
+             <label className="btn btn-secondary small" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <ImageIcon size={14} /> Upload Image
+               <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+             </label>
              <button className="btn btn-secondary small" onClick={applyTemplate} title="Apply Standard Clinical Template">
                <FileSpreadsheet size={14} /> Use Template
              </button>
@@ -195,111 +245,149 @@ const ScheduleOfActivities = () => {
       </section>
 
       {/* 2. DYNAMIC GRID */}
-      <section className="card" style={{ padding: '24px', minHeight: '400px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <TableIcon size={18} color="var(--primary-lime)" />
-          <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>Schedule of Activities Grid</h4>
-        </div>
-
-        {table.rows.length > 0 ? (
-          <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid var(--border-color)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
-              <thead>
-                <tr>
-                  {table.headers.map((h, i) => (
-                    <th key={i} style={{ padding: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-gray)', minWidth: i === 0 ? '220px' : '120px', position: 'sticky', top: 0, zIndex: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input 
-                          type="text" value={h} 
-                          onChange={e => handleHeaderChange(i, e.target.value)}
-                          style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '0.7rem', width: '100%', outline: 'none', color: i === 0 ? 'var(--primary-lime)' : 'inherit' }}
-                        />
-                        <button onClick={() => deleteColumn(i)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', opacity: 0.6 }} title="Delete Column">
-                          <X size={14} />
-                        </button>
-                      </div>
-                    </th>
-                  ))}
-                  <th style={{ width: '50px', background: 'var(--bg-gray)', border: '1px solid var(--border-color)' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((row, rIdx) => (
-                  <tr key={rIdx}>
-                    {table.headers.map((_, cIdx) => (
-                      <td key={cIdx} style={{ padding: '0', border: '1px solid var(--border-color)' }}>
-                        <textarea 
-                          value={row[cIdx] || ''}
-                          onChange={e => handleCellChange(rIdx, cIdx, e.target.value)}
-                          placeholder={cIdx === 0 ? "Enter activity..." : "X"}
-                          style={{ width: '100%', border: 'none', background: 'transparent', resize: 'none', fontSize: '0.85rem', padding: '12px', outline: 'none', minHeight: '52px', fontWeight: cIdx === 0 ? 600 : 400, textAlign: cIdx === 0 ? 'left' : 'center' }}
-                        />
-                      </td>
-                    ))}
-                    <td style={{ textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                      <button onClick={() => deleteRow(rIdx)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', opacity: 0.6 }} title="Delete Row">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {(table.rows.length > 0 || soa.image?.url) && (
+        <section className="card" style={{ padding: '24px', minHeight: '400px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+            <TableIcon size={18} color="var(--primary-lime)" />
+            <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>Schedule of Activities (SoA)</h4>
           </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-muted)', border: '2px dashed var(--border-color)', borderRadius: '16px' }}>
-            <TableIcon size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
-            <h5 style={{ fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>Empty Schedule</h5>
-            <p style={{ fontSize: '0.9rem', marginBottom: '24px', maxWidth: '300px', margin: '0 auto 24px' }}>Get started quickly by applying the clinical template or building a custom grid from the Hub above.</p>
-            <button className="btn btn-primary" onClick={applyTemplate}><FileSpreadsheet size={16} /> Apply Clinical Template</button>
-          </div>
-        )}
-      </section>
 
-      {/* 3. FLOWCHART IMAGE SECTION */}
-      <section className="card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <ImageIcon size={18} color="var(--primary-lime)" />
-          <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>3. SoA Flowchart / Visual Schema</h4>
-        </div>
-
-        {soa.image?.url ? (
-          <div style={{ position: 'relative' }}>
-            <div style={{ background: 'var(--bg-gray)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-              <img 
-                src={`${API_BASE_URL}${soa.image.url}`} 
-                style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '12px', marginBottom: '20px' }} 
-                alt="SoA Flowchart"
-              />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label>Figure Caption</label>
-                  <input type="text" className="form-input" value={soa.image.caption || ''} 
-                    onChange={e => updateNestedField(['soa_data', 'image', 'caption'], e.target.value)} placeholder="Figure 1.1..." />
-                </div>
-                <div className="form-group">
-                  <label>Description / Methodology Notes</label>
-                  <input type="text" className="form-input" value={soa.image.description || ''} 
-                    onChange={e => updateNestedField(['soa_data', 'image', 'description'], e.target.value)} placeholder="Study design details..." />
+          {soa.image?.url && (
+            <div style={{ position: 'relative', marginBottom: '24px' }}>
+              <div style={{ background: 'var(--bg-gray)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                <img 
+                  src={`${API_BASE_URL}${soa.image.url}`} 
+                  style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '12px', marginBottom: '20px' }} 
+                  alt="SoA Table"
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
+                  <div className="form-group">
+                    <label>Figure Caption</label>
+                    <input type="text" className="form-input" value={soa.image.caption || ''} 
+                      onChange={e => updateNestedField(['soa_data', 'image', 'caption'], e.target.value)} placeholder="Figure 1.1..." />
+                  </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <input type="text" className="form-input" value={soa.image.description || ''} 
+                      onChange={e => updateNestedField(['soa_data', 'image', 'description'], e.target.value)} placeholder="Notes..." />
+                  </div>
                 </div>
               </div>
+              <button onClick={() => updateNestedField(['soa_data', 'image'], null)} title="Remove Image"
+                style={{ position: 'absolute', top: '-10px', right: '-10px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>
+                <X size={18} />
+              </button>
             </div>
-            <button onClick={() => updateNestedField(['soa_data', 'image'], null)} title="Remove Image"
-              style={{ position: 'absolute', top: '-10px', right: '-10px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>
-              <X size={18} />
-            </button>
-          </div>
-        ) : (
-          <div style={{ border: '2px dashed var(--border-color)', borderRadius: '14px', padding: '48px', textAlign: 'center' }}>
-            <UploadCloud size={48} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.3 }} />
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Enhance your protocol with a visual study schema</p>
-            <label className="btn btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <Plus size={16} /> Upload Schema Image
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
-            </label>
-          </div>
-        )}
-      </section>
+          )}
+
+          {table.rows.length > 0 && (
+            <div 
+              className={`soa-table-container ${table.headers.length > 1 ? 'scrolled-x' : ''}`}
+            >
+              <table className="soa-table">
+                <thead>
+                  <tr>
+                    {/* Standardized 'ACTIONS' Header - Exactly like others */}
+                    <th style={{ width: '100px', minWidth: '100px' }}>
+                      <div className="soa-header-content">
+                        <div style={{ 
+                          textAlign: 'center', 
+                          fontSize: '0.9rem', 
+                          fontWeight: 700, 
+                          color: 'white',
+                          width: '100%',
+                          textTransform: 'uppercase',
+                          opacity: 0.9
+                        }}>
+                          Actions
+                        </div>
+                        <div className="soa-header-actions" style={{ visibility: 'hidden' }}>
+                          <Plus size={10} />
+                        </div>
+                      </div>
+                    </th>
+
+                    {table.headers.map((h, i) => (
+                      <th key={i} style={{ 
+                        minWidth: i === 0 ? '360px' : '150px'
+                      }}>
+                        <div className="soa-header-content">
+                          <input 
+                            className="soa-header-input"
+                            type="text" value={h} 
+                            onChange={e => handleHeaderChange(i, e.target.value)}
+                            style={{ 
+                              textAlign: 'center', 
+                              fontSize: '1rem',
+                              fontWeight: 700,
+                              color: 'white',
+                              width: '100%',
+                              background: 'transparent',
+                              border: 'none',
+                              padding: '4px 0'
+                            }}
+                            placeholder={i === 0 ? "e.g. Activity Group" : `e.g. ${getNextVisitName()}`}
+                          />
+                          <div className="soa-header-actions">
+                            <button className="soa-action-btn add" onClick={() => insertColumnAfter(i)} title="Insert After">
+                              <Plus size={10} />
+                            </button>
+                            {i > 0 && (
+                              <button className="soa-action-btn delete" onClick={() => deleteColumn(i)} title="Delete Column">
+                                <Trash2 size={10} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, rIdx) => (
+                    <tr key={rIdx}>
+                      {/* Row Actions Cell */}
+                      <td>
+                        <div className="soa-action-cell">
+                          <button className="soa-action-btn add" onClick={() => insertRowAfter(rIdx)} title="Insert Below">
+                            <Plus size={12} />
+                          </button>
+                          <button className="soa-action-btn delete" onClick={() => deleteRow(rIdx)} title="Delete Row">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </td>
+
+                      {table.headers.map((_, cIdx) => (
+                        <td key={cIdx}>
+                          {cIdx === 0 ? (
+                            <input 
+                              className="soa-cell-input"
+                              value={row[cIdx] || ''}
+                              onChange={e => handleCellChange(rIdx, cIdx, e.target.value)}
+                              placeholder="e.g. Informed Consent"
+                              style={{ width: '100%', border: 'none', background: 'transparent' }}
+                            />
+                          ) : (
+                            <div className="soa-toggle-cell">
+                              <button 
+                                className={`soa-toggle-btn ${row[cIdx] === '1' ? 'active' : ''}`}
+                                onClick={() => handleCellChange(rIdx, cIdx, row[cIdx] === '1' ? '0' : '1')}
+                              >
+                                <div className="soa-toggle-inner" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
     </div>
   );

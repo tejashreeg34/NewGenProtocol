@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
+import { Save, Trash2 } from 'lucide-react';
 
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
-import Footer from './components/Layout/Footer';
 
 import TitlePage from './components/Tabs/TitlePage';
 import ProtocolSections from './components/Tabs/ProtocolSections';
@@ -15,9 +15,13 @@ import QCReport from './components/Tabs/QCReport';
 import Generate from './components/Tabs/Generate';
 import Interpretation from './components/Tabs/Interpretation';
 import Dashboard from './components/Tabs/Dashboard';
+import TableOfContents from './components/Tabs/TableOfContents';
+import { useProtocol } from './context/ProtocolContext';
+import GlobalModal from './components/Common/GlobalModal';
+import LoginPage from './components/Auth/LoginPage';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('title-page');
+  const { activeTab, setActiveTab, openModal, isAuthenticated } = useProtocol();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -35,11 +39,27 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const handleGlobalSave = () => {
+    toast.success('Section data saved successfully', { icon: '💾' });
+  };
+
+  const handleGlobalClear = () => {
+    openModal({
+      title: 'Clear Section Data?',
+      message: 'Are you sure you want to clear all data in this section? This action cannot be undone.',
+      icon: 'trash',
+      onConfirm: () => {
+        toast('Section data cleared', { icon: '🗑️' });
+      }
+    });
+  };
+
   const renderTab = () => {
     switch (activeTab) {
       case 'title-page': return <TitlePage />;
       case 'approval': return <ApprovalAgreement />;
       case 'synopsis': return <Synopsis />;
+      case 'toc': return <TableOfContents />;
       case 'sections': return <ProtocolSections />;
       case 'qc': return <QCReport />;
       case 'preview': return <Preview />;
@@ -50,8 +70,19 @@ function App() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="app-container">
+        <Toaster position="top-right" />
+        <LoginPage />
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
+      <Toaster position="top-right" />
+      <GlobalModal />
       <Sidebar 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
@@ -74,9 +105,19 @@ function App() {
               {renderTab()}
             </motion.div>
           </AnimatePresence>
+
+          {/* Section Action Bar - hidden on read-only tabs */}
+          {!['qc', 'preview', 'generate', 'interpretation', 'toc'].includes(activeTab) && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
+              <button className="btn" onClick={handleGlobalClear} style={{ background: 'transparent', color: '#EF4444', border: '1px solid #EF4444', padding: '8px 16px', fontSize: '0.85rem' }}>
+                <Trash2 size={16} /> Clear Section Data
+              </button>
+              <button className="btn btn-primary" onClick={handleGlobalSave} style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+                <Save size={16} /> Save Progress
+              </button>
+            </div>
+          )}
         </div>
-        
-        <Footer />
       </main>
       
       <Toaster 

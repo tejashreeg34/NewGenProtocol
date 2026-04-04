@@ -172,10 +172,10 @@ def create_approval_section_pdf(protocol_data, styles, story):
     if approval_data.get('sponsor_reps'):
         story.append(Paragraph("Sponsor Representatives", styles['PDFHeader2']))
         for rep in approval_data['sponsor_reps']:
-            story.append(Paragraph(f"<b>Name:</b> {sanitize_pdf_text(strip_html_tags(rep.get('name', '')))}", styles['PDFNormal']))
-            story.append(Paragraph(f"<b>Title:</b> {sanitize_pdf_text(strip_html_tags(rep.get('title', '')))}", styles['PDFNormal']))
-            story.append(Paragraph(f"<b>Organization:</b> {sanitize_pdf_text(strip_html_tags(rep.get('organization', '')))}", styles['PDFNormal']))
-            story.append(Paragraph(f"<b>Date:</b> {sanitize_pdf_text(strip_html_tags(rep.get('date', '')))}", styles['PDFNormal']))
+            story.append(Paragraph(f"<b>Name:</b> {sanitize_pdf_text(rep.get('name', ''))}", styles['PDFNormal']))
+            story.append(Paragraph(f"<b>Title:</b> {sanitize_pdf_text(rep.get('title', ''))}", styles['PDFNormal']))
+            story.append(Paragraph(f"<b>Organization:</b> {sanitize_pdf_text(rep.get('organization', ''))}", styles['PDFNormal']))
+            story.append(Paragraph(f"<b>Date:</b> {sanitize_pdf_text(rep.get('date', ''))}", styles['PDFNormal']))
             
             # --- DIGITAL SIGNATURE ---
             sig_url = rep.get('signature')
@@ -227,8 +227,8 @@ def create_approval_section_pdf(protocol_data, styles, story):
     agree = approval_data.get('investigator_agreement')
     if agree:
         story.append(Paragraph("Investigator Agreement", styles['PDFHeader2']))
-        story.append(Paragraph(sanitize_pdf_text(strip_html_tags(agree.get('description', ''))), styles['PDFNormal']))
-        story.append(Paragraph(f"<b>Investigator Name:</b> {sanitize_pdf_text(strip_html_tags(agree.get('name', '')))}", styles['PDFNormal']))
+        story.append(Paragraph(sanitize_pdf_text(agree.get('description', '')), styles['PDFNormal']))
+        story.append(Paragraph(f"<b>Investigator Name:</b> {sanitize_pdf_text(agree.get('name', ''))}", styles['PDFNormal']))
         story.append(Paragraph(f"<b>Title:</b> {sanitize_pdf_text(strip_html_tags(agree.get('title', '')))}", styles['PDFNormal']))
         story.append(Paragraph(f"<b>Facility:</b> {sanitize_pdf_text(strip_html_tags(agree.get('facility', '')))}", styles['PDFNormal']))
         story.append(Paragraph(f"<b>Date:</b> {sanitize_pdf_text(strip_html_tags(agree.get('date', '')))}", styles['PDFNormal']))
@@ -554,6 +554,27 @@ def generate_pdf_document(protocol_data):
                                             except: pass
                                     if img_obj.get('caption'): story.append(Paragraph(f"<b>{sanitize_pdf_text(img_obj['caption'])}</b>", styles['PDFTable']))
                                     if img_obj.get('description'): story.append(Paragraph(sanitize_pdf_text(img_obj['description']), styles['PDFNormal']))
+                            
+                            if sub.get('customTable'):
+                                c_table = sub['customTable']
+                                headers = c_table.get('headers', [])
+                                rows = c_table.get('rows', [])
+                                if headers and rows:
+                                    t_data = [[sanitize_pdf_text(str(h)) for h in headers]]
+                                    for row in rows:
+                                        t_data.append([sanitize_pdf_text(str(c)) for c in row])
+                                    if len(t_data) > 1:
+                                        dyn_table = Table(t_data)
+                                        dyn_table.setStyle(TableStyle([
+                                            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                            ('FONTSIZE', (0, 0), (-1, -1), 8),
+                                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                                            ('WORDWRAP', (0, 0), (-1, -1), True),
+                                        ]))
+                                        story.append(dyn_table)
                         elif isinstance(sub, str): story.append(Paragraph(f"{section_num}.{i+1} {sanitize_pdf_text(sub)}", styles['PDFHeader2']))
     
     custom_keys = sorted([k for k in sections.keys() if k.isdigit() and int(k) > 11], key=lambda x: int(x))

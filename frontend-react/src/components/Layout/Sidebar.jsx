@@ -2,14 +2,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Activity, FileText, ClipboardList, CheckSquare, 
-  FileSpreadsheet, Eye, ShieldCheck, Zap, BrainCircuit 
+  FileSpreadsheet, Eye, ShieldCheck, Zap, BrainCircuit, List
 } from 'lucide-react';
 
+import { useProtocol } from '../../context/ProtocolContext';
+
 const Sidebar = ({ activeTab, onTabChange, isOpen, setIsOpen }) => {
+  const { user } = useProtocol();
   const tabs = [
     { id: 'title-page', label: 'Title Page', icon: FileText },
     { id: 'approval', label: 'Approval & Agreement', icon: CheckSquare },
     { id: 'synopsis', label: 'Synopsis', icon: FileSpreadsheet },
+    { id: 'toc', label: 'Table of Contents', icon: List },
     { id: 'sections', label: 'Protocol Sections', icon: ClipboardList },
     { id: 'qc', label: 'Quality Report', icon: ShieldCheck },
     { id: 'preview', label: 'Document Preview', icon: Eye },
@@ -17,6 +21,15 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, setIsOpen }) => {
     { id: 'interpretation', label: 'Interpretation', icon: BrainCircuit },
     { id: 'dashboard', label: 'Intelligence', icon: Activity },
   ];
+
+  const getInitials = (name) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const initials = getInitials(user?.full_name || user?.username || 'User');
 
   return (
     <>
@@ -90,11 +103,16 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, setIsOpen }) => {
             alignItems: 'center', 
             justifyContent: 'center',
             fontWeight: 700,
-            color: 'var(--dark-lime)'
-          }}>JD</div>
-          <div>
-            <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>John Doe</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Lead Investigator</div>
+            color: 'var(--dark-lime)',
+            fontSize: '0.85rem'
+          }}>{initials}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.full_name || user?.username || 'Guest'}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+              {user?.status || 'Lead Investigator'}
+            </div>
           </div>
         </div>
       </div>

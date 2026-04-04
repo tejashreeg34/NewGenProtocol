@@ -148,17 +148,11 @@ const ApprovalAgreement = () => {
             <div className="badge-dot" />
             <span className="badge-muted">CONFIDENTIAL</span>
           </div>
-          <h2 className="approval-heading">Protocol Approval &amp; Agreement</h2>
-          <p className="approval-subheading">
+          <h2 className="page-title">Protocol Approval &amp; Agreement</h2>
+          <p className="page-subtitle">
             Formal clinical trial authorization and investigator stewardship tracking.
           </p>
         </div>
-        <button
-          className="btn btn-primary approval-save-btn"
-          onClick={() => toast.success('Authorization data synchronized')}
-        >
-          <Save size={18} /> Save Authorization
-        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -176,7 +170,6 @@ const ApprovalAgreement = () => {
               <label>PROTOCOL NAME</label>
               <input
                 className="form-input"
-                style={{ fontSize: '1rem', fontWeight: 600 }}
                 value={approval.details?.protocol_name || ''}
                 onChange={(e) => handleDetailChange('protocol_name', e.target.value)}
                 placeholder="Enter complete trial title..."
@@ -186,7 +179,7 @@ const ApprovalAgreement = () => {
               <label>PROTOCOL NUMBER</label>
               <input
                 className="form-input"
-                style={{ fontWeight: 700, color: 'var(--dark-lime)' }}
+                style={{ color: 'var(--dark-lime)' }}
                 value={approval.details?.protocol_number || ''}
                 onChange={(e) => handleDetailChange('protocol_number', e.target.value)}
                 placeholder="e.g. CLIN-2024-001"

@@ -1,8 +1,11 @@
 import React from 'react';
-import { Search, Bell, Settings, ChevronDown, Menu } from 'lucide-react';
+import { LogOut, Menu, User } from 'lucide-react';
+import { useProtocol } from '../../context/ProtocolContext';
 import { motion } from 'framer-motion';
 
 const Header = ({ toggleSidebar }) => {
+  const { user, logout } = useProtocol();
+
   return (
     <header className="header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -21,65 +24,37 @@ const Header = ({ toggleSidebar }) => {
         >
           <Menu size={24} />
         </button>
-        <div style={{ position: 'relative' }}>
-          <Search size={18} style={{ 
-            position: 'absolute', 
-            left: '14px', 
-            top: '50%', 
-            transform: 'translateY(-50%)', 
-            color: 'var(--text-muted)' 
-          }} />
-          <input 
-            type="text" 
-            placeholder="Search resources..." 
-            style={{ 
-              padding: '12px 16px 12px 42px', 
-              borderRadius: '12px', 
-              border: 'none', 
-              background: '#F3F4F6',
-              width: '100%',
-              maxWidth: '320px',
-              fontSize: '0.9rem',
-              outline: 'none',
-              fontFamily: 'Inter'
-            }} 
-          />
-        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-        <motion.div whileHover={{ scale: 1.1 }} style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>
-          <Bell size={20} />
-        </motion.div>
-        <motion.div whileHover={{ scale: 1.1 }} style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>
-          <Settings size={20} />
-        </motion.div>
-        
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '12px', 
-          padding: '6px 12px', 
-          borderRadius: '10px', 
-          background: 'white',
-          border: '1px solid var(--border-color)',
-          cursor: 'pointer'
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ textAlign: 'right', display: 'none', sm: 'block' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)' }}>{user?.full_name || 'Clinical User'}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{user?.username || 'Researcher'}</div>
+          </div>
           <div style={{ 
-            width: '28px', 
-            height: '28px', 
-            borderRadius: '8px', 
-            background: 'var(--lime-gradient)',
+            width: '36px', 
+            height: '36px', 
+            borderRadius: '10px', 
+            background: 'rgba(16, 185, 129, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: '0.7rem',
-            fontWeight: 800
-          }}>V2</div>
-          <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Active Draft</span>
-          <ChevronDown size={14} color="var(--text-muted)" />
+            color: '#10B981',
+            border: '1px solid rgba(16, 185, 129, 0.2)'
+          }}>
+            <User size={20} />
+          </div>
         </div>
+
+        <motion.div 
+          onClick={logout}
+          whileHover={{ scale: 1.1, color: '#EF4444' }} 
+          style={{ cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}
+          title="Logout"
+        >
+          <LogOut size={20} />
+        </motion.div>
       </div>
     </header>
   );

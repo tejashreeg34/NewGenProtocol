@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -84,6 +85,103 @@ export const useProtocol = () => useContext(ProtocolContext);
 export const ProtocolProvider = ({ children }) => {
   const [data, setData] = useState(defaultProtocolData);
   const [currentId, setCurrentId] = useState(null);
+  
+  // Navigation state for global access (e.g. from TOC)
+  const [activeTab, setActiveTab] = useState('title-page');
+  const [activeSectionId, setActiveSectionId] = useState(null);
+  const [activeSubIndex, setActiveSubIndex] = useState(null);
+  
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('protocol_auth') === 'true';
+  });
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('protocol_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  const login = async (username, password) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsAuthenticated(true);
+        setUser(data.user);
+        localStorage.setItem('protocol_auth', 'true');
+        localStorage.setItem('protocol_user', JSON.stringify(data.user));
+        toast.success(`Welcome back, ${data.user.full_name || username}`);
+        return true;
+      } else {
+        const error = await response.json();
+        toast.error(error.detail || 'Login failed');
+        return false;
+      }
+    } catch (err) {
+      toast.error('Could not connect to server');
+      return false;
+    }
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    setUser(null);
+    localStorage.removeItem('protocol_auth');
+    localStorage.removeItem('protocol_user');
+    closeModal();
+    toast.success('Logged out successfully');
+    // Force a page reload to ensure all state is cleared and user is redirected
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+
+  // Global Modal state
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    type: 'confirm', // 'confirm' | 'input'
+    title: '',
+    message: '',
+    inputValue: '',
+    icon: 'help',
+    showPositionToggle: false,
+    relativeTo: '',
+    position: 'below', // 'above' | 'below'
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const openModal = (config) => {
+    setModalConfig({
+      isOpen: true,
+      type: config.type || 'confirm',
+      title: config.title || 'Are you sure?',
+      message: config.message || '',
+      inputValue: config.inputValue || '',
+      icon: config.icon || 'help',
+      showPositionToggle: config.showPositionToggle || false,
+      relativeTo: config.relativeTo || '',
+      position: config.position || 'below',
+      onConfirm: config.onConfirm || (() => {}),
+      onCancel: config.onCancel || (() => {})
+    });
+  };
+
+  const closeModal = () => setModalConfig(prev => ({ ...prev, isOpen: false }));
+  
+  const setModalInputValue = (val) => setModalConfig(prev => ({ ...prev, inputValue: val }));
+
+  const setModalPosition = (pos) => setModalConfig(prev => ({ ...prev, position: pos }));
+
+  const navigateTo = (tab, sectionId = null, subIndex = null) => {
+    setActiveTab(tab);
+    setActiveSectionId(sectionId);
+    setActiveSubIndex(subIndex);
+  };
 
   useEffect(() => {
     const fetchTemplate = async () => {
@@ -132,12 +230,27 @@ export const ProtocolProvider = ({ children }) => {
     });
   };
 
-  const addMainSection = (title) => {
+  const addMainSection = (title, position = null) => {
     setData(prev => {
       const sections = { ...prev.sections };
-      const nextId = (Object.keys(sections).length + 1).toString();
-      sections[nextId] = { title, main: '', subsections: [] };
-      return { ...prev, sections };
+      let newSections = {};
+      const currentLength = Object.keys(sections).length;
+      
+      let targetPos = position ? parseInt(position) : currentLength + 1;
+      if (targetPos < 1) targetPos = 1;
+      if (targetPos > currentLength + 1) targetPos = currentLength + 1;
+
+      for (let i = 1; i <= currentLength + 1; i++) {
+        if (i < targetPos) {
+          newSections[i.toString()] = sections[i.toString()];
+        } else if (i === targetPos) {
+          newSections[i.toString()] = { title, main: '', subsections: [] };
+        } else {
+          newSections[i.toString()] = sections[(i - 1).toString()];
+        }
+      }
+
+      return { ...prev, sections: newSections };
     });
   };
 
@@ -156,14 +269,20 @@ export const ProtocolProvider = ({ children }) => {
     });
   };
 
-  const addSubsection = (sectionId, title = 'New Subsection') => {
+  const addSubsection = (sectionId, title = 'New Subsection', index = null) => {
     setData(prev => {
       const sections = { ...prev.sections };
       if (sections[sectionId]) {
-        sections[sectionId].subsections = [
-          ...(sections[sectionId].subsections || []),
-          { title, content: '' }
-        ];
+        // Deep clone the target section and its subsections array to avoid mutation
+        const targetSection = { ...sections[sectionId] };
+        const subs = [...(targetSection.subsections || [])];
+        const newSub = { title, content: '' };
+        
+        const targetIndex = (index !== null && index !== '') ? parseInt(index) : subs.length;
+        
+        subs.splice(targetIndex, 0, newSub);
+        targetSection.subsections = subs;
+        sections[sectionId] = targetSection;
       }
       return { ...prev, sections };
     });
@@ -185,12 +304,28 @@ export const ProtocolProvider = ({ children }) => {
       setData, 
       currentId, 
       setCurrentId, 
-      updateField, 
-      updateNestedField,
+      updateField,
+      updateNestedField, 
       addMainSection,
       deleteSection,
       addSubsection,
-      deleteSubsection
+      deleteSubsection,
+      activeTab,
+      setActiveTab,
+      activeSectionId,
+      setActiveSectionId,
+      activeSubIndex,
+      setActiveSubIndex,
+      navigateTo,
+      modalConfig,
+      openModal,
+      closeModal,
+      setModalInputValue,
+      setModalPosition,
+      isAuthenticated,
+      user,
+      login,
+      logout
     }}>
       {children}
     </ProtocolContext.Provider>

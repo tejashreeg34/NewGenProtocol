@@ -9,26 +9,67 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
 from datetime import datetime
 import re
 
-def strip_html_tags(text):
-    """Remove HTML tags from a string"""
-    if not isinstance(text, str):
-        return str(text)
-    clean = re.compile('<.*?>')
-    return re.sub(clean, '', text)
+def add_html_to_paragraph(paragraph, html_text):
+    """
+    Parses a simple HTML string and adds formatted runs to the paragraph.
+    Supported tags: <b>, <strong>, <i>, <em>, <u>, <br>, <div>, <p>
+    """
+    if not html_text:
+        return
+    
+    # Simple regex-based parser for basic tags
+    # We split by tags and keep them in the resulting list
+    parts = re.split(r'(<[^>]+>)', str(html_text))
+    
+    current_styles = {
+        'bold': False,
+        'italic': False,
+        'underline': False
+    }
+    
+    for part in parts:
+        if not part:
+            continue
+        
+        tag_match = re.match(r'<(/?)([^ >]+)', part.lower())
+        if tag_match:
+            is_closing = tag_match.group(1) == '/'
+            tag_name = tag_match.group(2)
+            
+            if tag_name in ['b', 'strong']:
+                current_styles['bold'] = not is_closing
+            elif tag_name in ['i', 'em']:
+                current_styles['italic'] = not is_closing
+            elif tag_name in ['u']:
+                current_styles['underline'] = not is_closing
+            elif tag_name in ['br', 'div', 'p']:
+                # For block elements, we just add a break if it's not the start of the tag
+                if tag_name == 'br' or (not is_closing and tag_name in ['div', 'p']):
+                    paragraph.add_run().add_break()
+        else:
+            # It's text
+            # Decode common HTML entities
+            text = part.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            if text:
+                run = paragraph.add_run(text)
+                run.bold = current_styles['bold']
+                run.italic = current_styles['italic']
+                run.underline = current_styles['underline']
 
 def add_labeled_paragraph(doc, label, value, style='NormalText', bold_label=True):
     """Add a paragraph with a bold label and normal value"""
     p = doc.add_paragraph(style=style)
-    # Strip any literal tags from label and value to be safe
-    label = strip_html_tags(str(label))
-    value = strip_html_tags(str(value))
+    # Strip any tags from label for safety as it's usually just a string
+    label = re.sub(r'<.*?>', '', str(label))
     
     run_label = p.add_run(label)
     if bold_label:
         run_label.bold = True
     
-    p.add_run(f" {value}")
+    p.add_run(" ")
+    add_html_to_paragraph(p, value)
     return p
+
 import os
 import io
 import json
@@ -440,15 +481,17 @@ def create_synopsis_section(doc, protocol_data):
         obj = s_data.get('objectives', {})
         if obj.get('primary'):
             doc.add_heading('Primary Objectives', level=3)
-            for p in obj['primary']:
-                doc.add_paragraph(strip_html_tags(str(p)), style='BulletList')
+            for p_text in obj['primary']:
+                p = doc.add_paragraph(style='BulletList')
+                add_html_to_paragraph(p, p_text)
         
         # Adding missing Primary Endpoints display match to user's image
         end = s_data.get('endpoints', {})
         if end.get('primary'):
             doc.add_heading('Primary Endpoints', level=3)
-            for p in end['primary']:
-                doc.add_paragraph(strip_html_tags(str(p)), style='BulletList')
+            for p_text in end['primary']:
+                p = doc.add_paragraph(style='BulletList')
+                add_html_to_paragraph(p, p_text)
                 
         if s_data.get('num_patients'):
             add_labeled_paragraph(doc, "Number of Patients:", s_data['num_patients'])
@@ -501,11 +544,13 @@ def create_approval_section(doc, approval_data):
     
     if details.get('gcp_statement'):
         doc.add_heading('GCP Statement', level=2)
-        doc.add_paragraph(strip_html_tags(details['gcp_statement']), style='NormalText')
+        p = doc.add_paragraph(style='NormalText')
+        add_html_to_paragraph(p, details['gcp_statement'])
         
     if details.get('approval_statement'):
         doc.add_heading('Approval Statement', level=2)
-        doc.add_paragraph(strip_html_tags(details['approval_statement']), style='NormalText')
+        p = doc.add_paragraph(style='NormalText')
+        add_html_to_paragraph(p, details['approval_statement'])
 
     # Sponsor Reps
     if approval_data.get('sponsor_reps'):
@@ -513,19 +558,19 @@ def create_approval_section(doc, approval_data):
         for rep in approval_data['sponsor_reps']:
             p_name = doc.add_paragraph()
             p_name.add_run("Name: ").bold = True
-            p_name.add_run(strip_html_tags(rep.get('name', '')))
+            add_html_to_paragraph(p_name, rep.get('name', ''))
             
             p_title = doc.add_paragraph()
             p_title.add_run("Title: ").bold = True
-            p_title.add_run(strip_html_tags(rep.get('title', '')))
+            add_html_to_paragraph(p_title, rep.get('title', ''))
             
             p_org = doc.add_paragraph()
             p_org.add_run("Organization: ").bold = True
-            p_org.add_run(strip_html_tags(rep.get('organization', '')))
+            add_html_to_paragraph(p_org, rep.get('organization', ''))
             
             p_date = doc.add_paragraph()
             p_date.add_run("Date: ").bold = True
-            p_date.add_run(strip_html_tags(rep.get('date', '')))
+            add_html_to_paragraph(p_date, rep.get('date', ''))
             
             # --- DIGITAL SIGNATURE ---
             sig_url = rep.get('signature')
@@ -572,7 +617,7 @@ def create_approval_section(doc, approval_data):
         
         p_inv = doc.add_paragraph()
         p_inv.add_run("Investigator Name: ").bold = True
-        p_inv.add_run(strip_html_tags(agree.get('name', '')))
+        add_html_to_paragraph(p_inv, agree.get('name', ''))
         
         p_title = doc.add_paragraph()
         p_title.add_run("Title: ").bold = True
@@ -1018,13 +1063,15 @@ def generate_complete_word_document(protocol_data):
         doc.add_heading('2.1 Study Rationale', level=2)
         content = get_sub_content(0)
         if content:
-            doc.add_paragraph(content, style='NormalText')
+            p = doc.add_paragraph(style='NormalText')
+            add_html_to_paragraph(p, content)
 
         # 2.2 Background (Index 1)
         doc.add_heading('2.2 Background', level=2)
         content = get_sub_content(1)
         if content:
-            doc.add_paragraph(content, style='NormalText')
+            p = doc.add_paragraph(style='NormalText')
+            add_html_to_paragraph(p, content)
 
         doc.add_heading('2.3 Risk/Benefit Assessment', level=2)
 
@@ -1032,19 +1079,22 @@ def generate_complete_word_document(protocol_data):
         doc.add_heading('2.3.1 Known Potential Risks', level=3)
         content = get_sub_content(2)
         if content:
-            doc.add_paragraph(content, style='NormalText')
+            p = doc.add_paragraph(style='NormalText')
+            add_html_to_paragraph(p, content)
 
         # 2.3.2 Known Potential Benefits (Index 3)
         doc.add_heading('2.3.2 Known Potential Benefits', level=3)
         content = get_sub_content(3)
         if content:
-            doc.add_paragraph(content, style='NormalText')
+            p = doc.add_paragraph(style='NormalText')
+            add_html_to_paragraph(p, content)
 
         # 2.3.3 Assessment of Potential Risks and Benefits (Index 4)
         doc.add_heading('2.3.3 Assessment of Potential Risks and Benefits', level=3)
         content = get_sub_content(4)
         if content:
-            doc.add_paragraph(content, style='NormalText')
+            p = doc.add_paragraph(style='NormalText')
+            add_html_to_paragraph(p, content)
 
     doc.add_page_break()
 
@@ -1098,7 +1148,8 @@ def generate_complete_word_document(protocol_data):
             doc.add_heading(section_title, level=1)
 
             if sections[section_key].get('main'):
-                doc.add_paragraph(sections[section_key]['main'], style='NormalText')
+                p = doc.add_paragraph(style='NormalText')
+                add_html_to_paragraph(p, sections[section_key]['main'])
                 
             # Handle images in Main Section
             if sections[section_key].get('images'):
@@ -1138,11 +1189,16 @@ def generate_complete_word_document(protocol_data):
                             full_title = f"{section_num}.{i+1} {title}"
                             doc.add_heading(full_title, level=2)
                             if content:
-                                doc.add_paragraph(content, style='NormalText')
+                                p = doc.add_paragraph(style='NormalText')
+                                add_html_to_paragraph(p, content)
                             
                             # Subsection Images
                             if sub.get('images'):
                                 add_images_to_doc(doc, sub['images'])
+                                
+                            # Custom Table
+                            if sub.get('customTable'):
+                                create_dynamic_table_word(doc, sub['customTable'])
                                 
                         elif isinstance(sub, str):
                             # Handle plain string (title only)
@@ -1155,7 +1211,8 @@ def generate_complete_word_document(protocol_data):
                     for sub_idx_str, sub_content in sorted_subs:
                         if sub_content:
                             doc.add_heading(f"{section_num}.{int(sub_idx_str)+1} Subsection", level=2)
-                            doc.add_paragraph(sub_content, style='NormalText')
+                            p = doc.add_paragraph(style='NormalText')
+                            add_html_to_paragraph(p, sub_content)
 
             doc.add_page_break()
 
