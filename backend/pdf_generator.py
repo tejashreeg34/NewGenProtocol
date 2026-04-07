@@ -1,657 +1,859 @@
+"""
+pdf_generator.py
+Generates a Clinical Trial Protocol PDF document from frontend data,
+matching the Prot_1 reference structure using ReportLab.
+"""
+
+import os
+import re
+import io
+import base64
+from datetime import datetime
+from functools import partial
+
 from reportlab.lib.pagesizes import letter, A4
-from reportlab.pdfgen import canvas
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, ListFlowable, ListItem, Image
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    PageBreak, Image, KeepTogether
+)
 from reportlab.lib.units import inch, cm
 from reportlab.lib import colors
 from reportlab.lib.utils import ImageReader
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-import io
-import os
-import json
-import base64
-import re
-from datetime import datetime
 from PIL import Image as PILImage
-import re
 
-def strip_html_tags(text):
-    """Remove HTML tags from a string"""
+
+# ============================================================================
+# HELPERS
+# ============================================================================
+
+def strip_html(text):
     if not isinstance(text, str):
-        return str(text)
-    clean = re.compile('<.*?>')
-    return re.sub(clean, '', text)
+        return str(text) if text is not None else ''
+    return re.sub(r'<[^>]+>', '', text).strip()
 
-# Define the standard structure for sections
-TEMPLATE_STRUCTURE = [
-    {
-        "id": 1,
-        "title": "PROTOCOL SUMMARY",
-        "subsections": ["Synopsis", "Schema", "Schedule of Activities (SoA)"]
-    },
-    {
-        "id": 2,
-        "title": "INTRODUCTION",
-        "subsections": [
-            "Study Rationale", "Background", "Risk/Benefit Assessment",
-            "Known Potential Risks", "Known Potential Benefits", "Assessment of Potential Risks and Benefits"
-        ]
-    },
-    {"id": 3, "title": "OBJECTIVES AND ENDPOINTS", "subsections": []},
-    {
-        "id": 4,
-        "title": "STUDY DESIGN",
-        "subsections": [
-            "Overall Design", "Scientific Rationale for Study Design",
-            "Justification for Dose", "End of Study Definition"
-        ]
-    },
-    {
-        "id": 5,
-        "title": "STUDY POPULATION",
-        "subsections": [
-            "Inclusion Criteria", "Exclusion Criteria", "Lifestyle Considerations",
-            "Screen Failures", "Strategies for Recruitment and Retention"
-        ]
-    },
-    {
-        "id": 6,
-        "title": "STUDY INTERVENTION",
-        "subsections": [
-            "Study Intervention(s) Administration", "Study Intervention Description",
-            "Dosing and Administration", "Preparation/Handling/Storage/Accountability",
-            "Acquisition and accountability", "Formulation, Appearance, Packaging, and Labeling",
-            "Product Storage and Stability", "Preparation", "Measures to Minimize Bias: Randomization and Blinding",
-            "Study Intervention Compliance", "Concomitant Therapy", "Rescue Medicine"
-        ]
-    },
-    {
-        "id": 7,
-        "title": "STUDY INTERVENTION DISCONTINUATION AND PARTICIPANT DISCONTINUATION/WITHDRAWAL",
-        "subsections": [
-            "Discontinuation of Study Intervention",
-            "Participant Discontinuation/Withdrawal from the Study",
-            "Lost to Follow-Up"
-        ]
-    },
-    {
-        "id": 8,
-        "title": "STUDY ASSESSMENTS AND PROCEDURES",
-        "subsections": [
-            "Efficacy Assessments", "Safety and Other Assessments",
-            "Adverse Events and Serious Adverse Events", "Definition of Adverse Events (AE)",
-            "Definition of Serious Adverse Events (SAE)", "Classification of an Adverse Event",
-            "Time Period and Frequency for Event Assessment and Follow-Up",
-            "Adverse Event Reporting", "Serious Adverse Event Reporting",
-            "Reporting Events to Participants", "Events of Special Interest",
-            "Reporting of Pregnancy", "Unanticipated Problems",
-            "Definition of Unanticipated Problems (UP)", "Unanticipated Problem Reporting",
-            "Reporting Unanticipated Problems to Participants"
-        ]
-    },
-    {
-        "id": 9,
-        "title": "STATISTICAL CONSIDERATIONS",
-        "subsections": [
-            "Statistical Hypotheses", "Sample Size Determination", "Populations for Analyses",
-            "Statistical Analyses", "General Approach", "Analysis of the Primary Efficacy Endpoint(s)",
-            "Analysis of the Secondary Endpoint(s)", "Safety Analyses", "Baseline Descriptive Statistics",
-            "Planned Interim Analyses", "Sub-Group Analyses", "Tabulation of Individual participant Data",
-            "Exploratory Analyses"
-        ]
-    },
-    {
-        "id": 10,
-        "title": "SUPPORTING DOCUMENTATION AND OPERATIONAL CONSIDERATIONS",
-        "subsections": [
-            "Regulatory, Ethical, and Study Oversight Considerations", "Informed Consent Process",
-            "Study Discontinuation and Closure", "Confidentiality and Privacy",
-            "Future Use of Stored Specimens and Data", "Key Roles and Study Governance",
-            "Safety Oversight", "Clinical Monitoring", "Quality Assurance and Quality Control",
-            "Data Handling and Record Keeping", "Protocol Deviations", "Publication and Data Sharing Policy",
-            "Conflict of Interest Policy", "Additional Considerations", "Abbreviations",
-            "Protocol Amendment History"
-        ]
-    },
-    {"id": 11, "title": "REFERENCES", "subsections": []}
-]
 
-def get_image_from_data_url(data_url):
-    """Convert base64 data URL to a bytes stream for ReportLab/docx"""
-    if not data_url:
+def safe(val, fallback=''):
+    v = strip_html(str(val)) if val is not None else ''
+    return v if v else fallback
+
+
+def sanitize(text):
+    """Sanitize text for ReportLab standard fonts (replaces unicode chars)."""
+    if not isinstance(text, str):
+        text = str(text) if text is not None else ''
+    replacements = {
+        '\u2013': '-', '\u2014': '-', '\u2010': '-', '\u2011': '-',
+        '\u2012': '-', '\u2015': '-', '\u2212': '-',
+        '\u201c': '"', '\u201d': '"', '\u2018': "'", '\u2019': "'",
+        '\u00a0': ' ', '\ufeff':  '', '\r': '',    '\u00ad': '-',
+        '\u2022': '*', '\u200b': '', '\u200c': '', '\u200d': '',
+        '\u200e': '', '\u200f': '', '\u202f': ' ', '\u2060': '',
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    text = re.sub(r'[\u2010-\u2015\u2212\u00ad]', '-', text)
+    text = re.sub(r'[\u00a0\u202f\u2007-\u2009]', ' ', text)
+    try:
+        text = text.encode('ascii', 'replace').decode('ascii')
+    except Exception:
+        sanitized = ''
+        for ch in text:
+            if 32 <= ord(ch) <= 126 or ord(ch) in (10, 13):
+                sanitized += ch
+            else:
+                sanitized += '?'
+        text = sanitized
+    return text
+
+
+def s(val):
+    """Safe + sanitize in one step."""
+    return sanitize(safe(val))
+
+
+def get_image_stream(data_url):
+    """Convert a base64 data URL → BytesIO (PNG) via PIL."""
+    if not data_url or not isinstance(data_url, str):
         return None
-    if isinstance(data_url, str) and data_url.startswith('data:image/'):
+    if data_url.startswith('data:image/'):
         try:
-            # Format: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'
-            header, encoded = data_url.split(",", 1)
-            data = base64.b64decode(encoded)
-            return io.BytesIO(data)
+            _, encoded = data_url.split(',', 1)
+            raw = base64.b64decode(encoded)
+            buf = io.BytesIO(raw)
+            pil = PILImage.open(buf)
+            if pil.mode == 'RGBA':
+                bg = PILImage.new('RGB', pil.size, (255, 255, 255))
+                bg.paste(pil, mask=pil.split()[3])
+                pil = bg
+            out = io.BytesIO()
+            pil.save(out, format='PNG')
+            out.seek(0)
+            return out
         except Exception:
             return None
     return None
 
-def create_approval_section_pdf(protocol_data, styles, story):
-    """Create the Protocol Approval & Agreement section for PDF"""
-    approval_data = protocol_data.get('approval_data')
-    if not approval_data or not approval_data.get('details'):
-        return
 
-    story.append(Paragraph("PROTOCOL APPROVAL & AGREEMENT", styles['PDFHeader1']))
-    details = approval_data['details']
-    
-    table_data = [
-        [sanitize_pdf_text("Protocol Name:"), sanitize_pdf_text(strip_html_tags(details.get('protocol_name', '')))],
-        [sanitize_pdf_text("Protocol Number:"), sanitize_pdf_text(strip_html_tags(details.get('protocol_number', '')))],
-        [sanitize_pdf_text("IMP:"), sanitize_pdf_text(strip_html_tags(details.get('imp', '')))],
-        [sanitize_pdf_text("Indication:"), sanitize_pdf_text(strip_html_tags(details.get('indication', '')))],
-        [sanitize_pdf_text("Clinical Phase:"), sanitize_pdf_text(strip_html_tags(details.get('clinical_phase', '')))],
-        [sanitize_pdf_text("Investigators:"), sanitize_pdf_text(strip_html_tags(details.get('investigators', '')))],
-        [sanitize_pdf_text("Coordinating Investigator:"), sanitize_pdf_text(strip_html_tags(details.get('coordinating_investigator', '')))],
-        [sanitize_pdf_text("Expert Committee:"), sanitize_pdf_text(strip_html_tags(details.get('expert_committee', '')))]
-    ]
-    
-    t = Table(table_data, colWidths=[2*inch, 4*inch])
-    t.setStyle(TableStyle([
-        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t)
-    story.append(Spacer(1, 12))
-    
-    if details.get('gcp_statement'):
-        story.append(Paragraph("GCP Statement", styles['PDFHeader2']))
-        story.append(Paragraph(sanitize_pdf_text(details['gcp_statement']), styles['PDFNormal']))
-        
-    if details.get('approval_statement'):
-        story.append(Paragraph("Approval Statement", styles['PDFHeader2']))
-        story.append(Paragraph(sanitize_pdf_text(details['approval_statement']), styles['PDFNormal']))
+def build_image_flowable(url, width=6 * inch):
+    """Return a ReportLab Image flowable from a data URL or file path."""
+    stream = get_image_stream(url)
+    if stream:
+        try:
+            return Image(stream, width=width, height=4 * inch, kind='proportional')
+        except Exception:
+            return None
+    path = url.lstrip('/') if isinstance(url, str) else None
+    if path and os.path.exists(path):
+        try:
+            return Image(path, width=width, height=4 * inch, kind='proportional')
+        except Exception:
+            return None
+    return None
 
-    if approval_data.get('sponsor_reps'):
-        story.append(Paragraph("Sponsor Representatives", styles['PDFHeader2']))
-        for rep in approval_data['sponsor_reps']:
-            story.append(Paragraph(f"<b>Name:</b> {sanitize_pdf_text(rep.get('name', ''))}", styles['PDFNormal']))
-            story.append(Paragraph(f"<b>Title:</b> {sanitize_pdf_text(rep.get('title', ''))}", styles['PDFNormal']))
-            story.append(Paragraph(f"<b>Organization:</b> {sanitize_pdf_text(rep.get('organization', ''))}", styles['PDFNormal']))
-            story.append(Paragraph(f"<b>Date:</b> {sanitize_pdf_text(rep.get('date', ''))}", styles['PDFNormal']))
-            
-            # --- DIGITAL SIGNATURE ---
-            sig_url = rep.get('signature')
-            signature_embedded = False
-            
-            if sig_url:
-                # Try as Base64 first
-                sig_stream = get_image_from_data_url(sig_url)
-                if sig_stream:
-                    try:
-                        sig_stream.seek(0)
-                        # Use PIL to ensure image is well-formed for ReportLab
-                        pil_img = PILImage.open(sig_stream)
-                        if pil_img.mode == 'RGBA':
-                            # Create a white background for transparent images
-                            background = PILImage.new("RGB", pil_img.size, (255, 255, 255))
-                            background.paste(pil_img, mask=pil_img.split()[3])
-                            pil_img = background
-                        
-                        # Save to a fresh BytesIO for ReportLab
-                        temp_buf = io.BytesIO()
-                        pil_img.save(temp_buf, format='PNG')
-                        temp_buf.seek(0)
-                        
-                        story.append(Paragraph("<b>Signature:</b>", styles['PDFNormal']))
-                        img = Image(temp_buf, width=1.5*inch, height=0.5*inch, kind='proportional')
-                        story.append(img)
-                        signature_embedded = True
-                    except Exception as e:
-                        story.append(Paragraph(f"<b>Signature Error:</b> {str(e)}", styles['PDFNormal']))
-                else:
-                    # Try as local path
-                    img_path = sig_url.lstrip('/')
-                    if os.path.exists(img_path):
-                        try:
-                            story.append(Paragraph("<b>Signature:</b>", styles['PDFNormal']))
-                            story.append(Image(img_path, width=1.5*inch, height=0.5*inch, kind='proportional'))
-                            signature_embedded = True
-                        except Exception as e:
-                            story.append(Paragraph(f"<b>Signature Error:</b> {str(e)}", styles['PDFNormal']))
-            
-            if not signature_embedded:
-                story.append(Paragraph("<b>Signature:</b> ____________________", styles['PDFNormal']))
 
-            story.append(Spacer(1, 6))
-            story.append(Paragraph("-" * 40, styles['PDFNormal']))
-            story.append(Spacer(1, 6))
+# ============================================================================
+# STYLES
+# ============================================================================
 
-    agree = approval_data.get('investigator_agreement')
-    if agree:
-        story.append(Paragraph("Investigator Agreement", styles['PDFHeader2']))
-        story.append(Paragraph(sanitize_pdf_text(agree.get('description', '')), styles['PDFNormal']))
-        story.append(Paragraph(f"<b>Investigator Name:</b> {sanitize_pdf_text(agree.get('name', ''))}", styles['PDFNormal']))
-        story.append(Paragraph(f"<b>Title:</b> {sanitize_pdf_text(strip_html_tags(agree.get('title', '')))}", styles['PDFNormal']))
-        story.append(Paragraph(f"<b>Facility:</b> {sanitize_pdf_text(strip_html_tags(agree.get('facility', '')))}", styles['PDFNormal']))
-        story.append(Paragraph(f"<b>Date:</b> {sanitize_pdf_text(strip_html_tags(agree.get('date', '')))}", styles['PDFNormal']))
+def build_styles():
+    styles = getSampleStyleSheet()
 
-        # --- DIGITAL SIGNATURE ---
-        sig_url = agree.get('signature')
-        signature_embedded = False
-        
-        if sig_url:
-            sig_stream = get_image_from_data_url(sig_url)
-            if sig_stream:
-                try:
-                    sig_stream.seek(0)
-                    pil_img = PILImage.open(sig_stream)
-                    if pil_img.mode == 'RGBA':
-                        background = PILImage.new("RGB", pil_img.size, (255, 255, 255))
-                        background.paste(pil_img, mask=pil_img.split()[3])
-                        pil_img = background
-                    
-                    temp_buf = io.BytesIO()
-                    pil_img.save(temp_buf, format='PNG')
-                    temp_buf.seek(0)
-                    
-                    story.append(Paragraph("<b>Signature:</b>", styles['PDFNormal']))
-                    img = Image(temp_buf, width=1.5*inch, height=0.5*inch, kind='proportional')
-                    story.append(img)
-                    signature_embedded = True
-                except Exception as e:
-                    story.append(Paragraph(f"<b>Signature Error:</b> {str(e)}", styles['PDFNormal']))
-            else:
-                img_path = sig_url.lstrip('/')
-                if os.path.exists(img_path):
-                    try:
-                        story.append(Paragraph("<b>Signature:</b>", styles['PDFNormal']))
-                        story.append(Image(img_path, width=1.5*inch, height=0.5*inch, kind='proportional'))
-                        signature_embedded = True
-                    except Exception as e:
-                        story.append(Paragraph(f"<b>Signature Error:</b> {str(e)}", styles['PDFNormal']))
-        
-        if not signature_embedded:
-            story.append(Paragraph("<b>Signature:</b> ____________________", styles['PDFNormal']))
+    def add(name, parent_name, **kwargs):
+        if name not in styles:
+            parent = styles[parent_name]
+            styles.add(ParagraphStyle(name=name, parent=parent, **kwargs))
+        return styles[name]
 
-    story.append(PageBreak())
+    add('PTitle',   'Heading1', fontSize=16, alignment=1, spaceAfter=24, fontName='Helvetica-Bold')
+    add('PH1',      'Heading1', fontSize=14, spaceBefore=12, spaceAfter=6,  fontName='Helvetica-Bold')
+    add('PH2',      'Heading2', fontSize=12, spaceBefore=10, spaceAfter=4,  fontName='Helvetica-Bold')
+    add('PH3',      'Heading3', fontSize=11, spaceBefore=8,  spaceAfter=2,  fontName='Helvetica-Bold')
+    add('PNormal',  'Normal',   fontSize=11, spaceAfter=6,   leading=14)
+    add('PDetail',  'Normal',   fontSize=12, alignment=1,    spaceAfter=4)
+    add('PTable',   'Normal',   fontSize=9,  spaceAfter=2)
+    add('PBullet',  'Normal',   fontSize=11, leftIndent=18,  spaceAfter=3)
+    add('PCaption', 'Normal',   fontSize=10, alignment=1,    fontName='Helvetica-Bold', spaceAfter=4)
 
-def draw_header_footer(canvas, doc, protocol_data):
-    """Callback to draw header and footer on each page"""
+    return styles
+
+
+# ============================================================================
+# HEADER / FOOTER CALLBACK
+# ============================================================================
+
+def draw_header_footer(canvas, doc, pd):
     canvas.saveState()
-    
-    # Page dimensions
-    width, height = letter
-    
-    # Font settings for header/footer
+    w, h = letter
+
+    title = sanitize(pd.get('protocol_title', 'Clinical Trial Protocol'))
+    version = sanitize(str(pd.get('version_number', '1.0')))
+    raw = pd.get('protocol_date', datetime.now().strftime('%Y-%m-%d'))
+    try:
+        formatted_date = sanitize(datetime.strptime(raw, '%Y-%m-%d').strftime('%d %b %Y'))
+    except ValueError:
+        formatted_date = sanitize(raw)
+
     canvas.setFont('Helvetica', 9)
     canvas.setFillColor(colors.grey)
-    
-    # Protocol Metadata
-    title = sanitize_pdf_text(protocol_data.get('protocol_title', 'Clinical Trial Protocol'))
-    version = sanitize_pdf_text(str(protocol_data.get('version_number', '1.0')))
-    raw_date = protocol_data.get('protocol_date', datetime.now().strftime('%Y-%m-%d'))
-    try:
-        dt_obj = datetime.strptime(raw_date, '%Y-%m-%d')
-        formatted_date = sanitize_pdf_text(dt_obj.strftime('%d %b %Y'))
-    except ValueError:
-        formatted_date = sanitize_pdf_text(raw_date)
-        
-    # --- HEADER ---
-    # Left: Protocol Title
-    canvas.drawString(inch, height - 0.5*inch, title)
-    # Right: Version and Date
-    canvas.drawRightString(width - inch, height - 0.5*inch, f"Version {version}")
-    canvas.drawRightString(width - inch, height - 0.65*inch, formatted_date)
-    
-    # --- FOOTER ---
-    # Center: Title - Version - Date
-    # Use a simple dash '-' instead of en-dash
-    footer_text = f"{title} - Version {version} {formatted_date}"
-    canvas.drawCentredString(width/2, 0.5*inch, sanitize_pdf_text(footer_text))
-    # Bottom Center: Page Number
-    canvas.drawCentredString(width/2, 0.35*inch, f"{doc.page}")
-    
+
+    # Header
+    canvas.drawString(inch, h - 0.5 * inch, title)
+    canvas.drawRightString(w - inch, h - 0.5 * inch, f'Version {version}')
+    canvas.drawRightString(w - inch, h - 0.65 * inch, formatted_date)
+
+    # Footer
+    footer_text = f'{title} - Version {version} {formatted_date}'
+    canvas.drawCentredString(w / 2, 0.5 * inch, footer_text)
+    canvas.drawCentredString(w / 2, 0.35 * inch, str(doc.page))
+
     canvas.restoreState()
 
-def sanitize_pdf_text(text):
-    """Replace special characters that often cause black boxes in ReportLab"""
-    if not isinstance(text, str):
-        return str(text)
-    
-    # Comprehensive replacement for characters known to cause issues with Standard Fonts (WinAnsi)
-    replacements = {
-        '\u2013': '-', # en-dash
-        '\u2014': '-', # em-dash
-        '\u2010': '-', # hyphen
-        '\u2011': '-', # non-breaking hyphen
-        '\u2012': '-', # figure dash
-        '\u2015': '-', # horizontal bar
-        '\u2212': '-', # minus sign
-        '\u201b': "'", # single high-reversed-9 quotation mark
-        '\u201c': '"', # left double quotation mark
-        '\u201d': '"', # right double quotation mark
-        '\u2018': "'", # left single quotation mark
-        '\u2019': "'", # right single quotation mark
-        '\u00a0': ' ', # non-breaking space
-        '\ufeff': '',  # byte order mark
-        '\r': '',      # carriage return
-        '\u00ad': '-', # soft hyphen
-        '\u2022': '*', # bullet point
-        '\u200b': '',  # zero width space
-        '\u200c': '',  # zero width non-joiner
-        '\u200d': '',  # zero width joiner
-        '\u200e': '',  # left-to-right mark
-        '\u200f': '',  # right-to-left mark
-        '\u202f': ' ', # narrow non-breaking space
-        '\u2060': '',  # word joiner
-        '\u005f': '_', # underscore
-    }
-    
-    for old, new in replacements.items():
-        text = text.replace(old, new)
-        
-    # Regex to catch any remaining variants of hyphen/dash/space in Unicode
-    text = re.sub(r'[\u2010-\u2015\u2212\u00ad]', '-', text)
-    text = re.sub(r'[\u00a0\u202f\u2007\u2008\u2009]', ' ', text)
-    
-    # Final pass: any character above 126 that isn't handled might still cause a box
-    # Convert remaining high Unicode characters to closest ASCII or question mark
-    # First try to encode to latin-1 which ReportLab handles better, then fallback to ASCII
-    try:
-        # Most Western chars fit in latin-1, but ReportLab's Helvetica works best with ASCII
-        # for maximum compatibility without font embedding.
-        text = text.encode('ascii', 'replace').decode('ascii')
-    except:
-        # If encoding fails, manually strip/replace
-        sanitized = ""
-        for char in text:
-            if 32 <= ord(char) <= 126 or ord(char) in [10, 13]:
-                sanitized += char
-            else:
-                sanitized += '?'
-        text = sanitized
-        
-    return text
 
-def generate_pdf_document(protocol_data):
-    """Generate PDF document using ReportLab"""
-    output_dir = "generated_docs"
-    os.makedirs(output_dir, exist_ok=True)
+# ============================================================================
+# BUILDER HELPERS
+# ============================================================================
 
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    version = str(protocol_data.get('version_number', '1.0')).replace('.', '_')
-    filename = f"protocol_{version}_{timestamp}.pdf"
-    filepath = os.path.join(output_dir, filename)
+def info_table(rows, styles, col_w=(2 * inch, 4 * inch)):
+    """Two-column label/value table."""
+    data = [[Paragraph(s(lbl), styles['PTable']), Paragraph(s(val), styles['PTable'])]
+            for lbl, val in rows]
+    t = Table(data, colWidths=list(col_w))
+    t.setStyle(TableStyle([
+        ('FONTNAME',  (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('GRID',      (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN',    (0, 0), (-1, -1), 'TOP'),
+        ('PADDING',   (0, 0), (-1, -1), 4),
+    ]))
+    return t
 
-    # Use 1 inch margins all around to match Word
-    doc = SimpleDocTemplate(
-        filepath, 
-        pagesize=letter, 
-        rightMargin=inch, 
-        leftMargin=inch, 
-        topMargin=inch, 
-        bottomMargin=inch
-    )
-    story = []
-    
-    styles = getSampleStyleSheet()
-    if 'ProtocolTitle' not in styles:
-        styles.add(ParagraphStyle(name='ProtocolTitle', parent=styles['Heading1'], alignment=1, fontSize=16, spaceAfter=24))
-    if 'PDFHeader1' not in styles:
-        styles.add(ParagraphStyle(name='PDFHeader1', parent=styles['Heading1'], fontSize=14, spaceBefore=12, spaceAfter=6))
-    if 'PDFHeader2' not in styles:
-        styles.add(ParagraphStyle(name='PDFHeader2', parent=styles['Heading2'], fontSize=12, spaceBefore=10, spaceAfter=4))
-    if 'PDFHeader3' not in styles:
-        styles.add(ParagraphStyle(name='PDFHeader3', parent=styles['Heading3'], fontSize=11, spaceBefore=8, spaceAfter=2))
-    if 'PDFNormal' not in styles:
-        styles.add(ParagraphStyle(name='PDFNormal', parent=styles['Normal'], fontSize=11, spaceAfter=6))
-    if 'PDFTable' not in styles:
-        styles.add(ParagraphStyle(name='PDFTable', parent=styles['Normal'], fontSize=9))
-    if 'ProtocolDetail' not in styles:
-        styles.add(ParagraphStyle(name='ProtocolDetail', parent=styles['Normal'], fontSize=12, alignment=1, spaceAfter=2))
-    
-    story.append(Paragraph(sanitize_pdf_text(protocol_data.get('protocol_title', 'Clinical Trial Protocol')), styles['ProtocolTitle']))
-    
-    doc_details = [
-        ("Protocol Number:", sanitize_pdf_text(protocol_data.get('protocol_number', ''))),
-        ("NCT Number:", sanitize_pdf_text(protocol_data.get('nct_number', ''))),
-        ("Principal Investigator:", sanitize_pdf_text(protocol_data.get('principal_investigator', ''))),
-        ("Sponsor:", sanitize_pdf_text(protocol_data.get('sponsor', ''))),
-        ("Funded by:", sanitize_pdf_text(protocol_data.get('funded_by', ''))),
-        ("Version Number:", sanitize_pdf_text(protocol_data.get('version_number', ''))),
-        ("Date:", sanitize_pdf_text(protocol_data.get('protocol_date', datetime.now().strftime('%d %B %Y'))))
+
+def dynamic_table(headers, rows, styles):
+    """Generic multi-column table."""
+    if not headers:
+        return None
+    col_w = 6.5 * inch / len(headers)
+    data = [[Paragraph(s(h), styles['PTable']) for h in headers]]
+    for row in (rows or []):
+        if isinstance(row, list):
+            data.append([Paragraph(s(row[i] if i < len(row) else ''), styles['PTable']) for i in range(len(headers))])
+        elif isinstance(row, dict):
+            data.append([Paragraph(s(row.get(h, '')), styles['PTable']) for h in headers])
+    if len(data) < 2:
+        return None
+    t = Table(data, colWidths=[col_w] * len(headers), repeatRows=1)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2d6a4f')),
+        ('TEXTCOLOR',  (0, 0), (-1, 0), colors.white),
+        ('FONTNAME',   (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE',   (0, 0), (-1, -1), 9),
+        ('GRID',       (0, 0), (-1, -1), 0.5, colors.black),
+        ('VALIGN',     (0, 0), (-1, -1), 'TOP'),
+        ('WORDWRAP',   (0, 0), (-1, -1), True),
+    ]))
+    return t
+
+
+def section_break(story):
+    story.append(PageBreak())
+
+
+def h1(text, styles):
+    return Paragraph(s(text), styles['PH1'])
+
+
+def h2(text, styles):
+    return Paragraph(s(text), styles['PH2'])
+
+
+def h3(text, styles):
+    return Paragraph(s(text), styles['PH3'])
+
+
+def para(text, styles):
+    return Paragraph(s(text), styles['PNormal'])
+
+
+def bullet(text, styles):
+    return Paragraph(f'• {s(text)}', styles['PBullet'])
+
+
+def sp(n=6):
+    return Spacer(1, n)
+
+
+# ============================================================================
+# SECTION BUILDERS
+# ============================================================================
+
+def build_title_page(story, pd, styles):
+    story.append(Paragraph(s(pd.get('protocol_title', 'Clinical Trial Protocol')), styles['PTitle']))
+    story.append(sp(12))
+
+    rows = [
+        ('Protocol Number:',                                    pd.get('protocol_number', '')),
+        ('National Clinical Trial (NCT) Identified Number:',    pd.get('nct_number', '')),
+        ('Principal Investigator:',                             pd.get('principal_investigator', '')),
+        ('IND/IDE Sponsor:',                                    pd.get('sponsor', '')),
+        ('Funded by:',                                          pd.get('funded_by', '')),
+        ('Version Number:',                                     pd.get('version_number', '')),
+        ('Date:',                                               pd.get('protocol_date', datetime.now().strftime('%d %B %Y'))),
     ]
-    
-    for label, value in doc_details:
-        story.append(Paragraph(f"<b>{label}</b> {value}", styles['ProtocolDetail']))
-        story.append(Spacer(1, 6))
-    
-    story.append(PageBreak())
-    
-    story.append(Paragraph("TABLE OF CONTENTS", styles['ProtocolTitle']))
-    toc_items = ["STATEMENT OF COMPLIANCE", "PROTOCOL APPROVAL & AGREEMENT", "1 PROTOCOL SUMMARY"]
-    for i in range(2, 12):
-        sec = next((s for s in TEMPLATE_STRUCTURE if s['id'] == i), None)
-        if sec: toc_items.append(f"{i} {sec['title']}")
-    toc_items.append("APPENDICES")
-    for item in toc_items: story.append(Paragraph(f"• {sanitize_pdf_text(item)}", styles['PDFNormal']))
-    story.append(PageBreak())
-    
-    story.append(Paragraph("STATEMENT OF COMPLIANCE", styles['PDFHeader1']))
-    story.append(Paragraph("The trial will be carried out in accordance with International Conference on Harmonisation Good Clinical Practice (ICH GCP)...", styles['PDFNormal']))
-    story.append(PageBreak())
+    story.append(info_table(rows, styles, col_w=(2.8 * inch, 3.7 * inch)))
 
-    create_approval_section_pdf(protocol_data, styles, story)
-    
-    story.append(Paragraph("1 PROTOCOL SUMMARY", styles['PDFHeader1']))
-    
-    s_data = protocol_data.get('synopsis_data')
-    if s_data and s_data.get('overview', {}).get('title'):
-        story.append(Paragraph("1.1 Synopsis", styles['PDFHeader2']))
-        ov = s_data['overview']
-        story.append(Paragraph(f"<b>Title:</b> {sanitize_pdf_text(ov.get('title', ''))}", styles['PDFNormal']))
-        story.append(Paragraph(f"<b>Clinical Phase:</b> {sanitize_pdf_text(ov.get('clinical_phase', ''))}", styles['PDFNormal']))
-        obj = s_data.get('objectives', {})
-        if obj.get('primary'):
-            story.append(Paragraph("Primary Objectives", styles['PDFHeader3']))
-            for item in obj['primary']: story.append(Paragraph(f"• {sanitize_pdf_text(str(item))}", styles['PDFNormal']))
-    elif protocol_data.get('synopsis'):
-        story.append(Paragraph("1.1 Synopsis", styles['PDFHeader2']))
-        table_data = [[sanitize_pdf_text(k), sanitize_pdf_text(v)] for k, v in protocol_data['synopsis'].items() if v]
-        if table_data:
-            synopsis_table = Table(table_data, colWidths=[2*inch, 4*inch])
-            synopsis_table.setStyle(TableStyle([('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('GRID', (0,0), (-1,-1), 1, colors.black)]))
-            story.append(synopsis_table)
-    story.append(Spacer(1, 12))
+    summary = s(pd.get('summary_changes', ''))
+    if summary:
+        story.append(sp(12))
+        story.append(Paragraph('<b>Summary of Changes from Previous Version:</b>', styles['PNormal']))
+        story.append(para(summary, styles))
 
-    schema_data = protocol_data.get('schema_data')
-    if schema_data and (schema_data.get('image_url') or schema_data.get('images')):
-        story.append(Paragraph("1.2 Schema", styles['PDFHeader2']))
-        images_to_process = schema_data.get('images', [])
-        if not images_to_process and schema_data.get('image_url'):
-            images_to_process = [{'url': schema_data['image_url'], 'caption': schema_data.get('caption'), 'description': schema_data.get('description')}]
-        for img_obj in images_to_process:
-            if not img_obj.get('url'): continue
-            ip = img_obj['url'].lstrip('/')
-            if os.path.exists(ip):
-                try: story.append(Image(ip, width=6*inch, height=4*inch, kind='proportional'))
-                except: pass
-            if img_obj.get('caption'): story.append(Paragraph(f"<b>{sanitize_pdf_text(img_obj['caption'])}</b>", styles['PDFTable']))
-            if img_obj.get('description'): story.append(Paragraph(sanitize_pdf_text(img_obj['description']), styles['PDFNormal']))
-            story.append(Spacer(1, 0.2*inch))
-            
-    if protocol_data.get('soa_data', {}):
-        soa_data = protocol_data.get('soa_data', {})
+    section_break(story)
+
+
+def build_approval_section(story, pd, styles):
+    approval = pd.get('approval_data') or {}
+    details = approval.get('details') or {}
+
+    has_detail = any(safe(v) for v in details.values())
+    has_reps = bool(approval.get('sponsor_reps') or approval.get('cro_reps'))
+    has_agree = bool(approval.get('investigator_agreement'))
+
+    if not (has_detail or has_reps or has_agree):
+        return
+
+    story.append(h1('PROTOCOL APPROVAL & AGREEMENT', styles))
+
+    detail_rows = [
+        ('Protocol Name:',             details.get('protocol_name', '')),
+        ('Protocol Number:',           details.get('protocol_number', '')),
+        ('IMP:',                        details.get('imp', '')),
+        ('Indication:',                details.get('indication', '')),
+        ('Clinical Phase:',            details.get('clinical_phase', '')),
+        ('Investigators:',             details.get('investigators', '')),
+        ('Coordinating Investigator:', details.get('coordinating_investigator', '')),
+        ('Expert Committee:',          details.get('expert_committee', '')),
+        ('Sponsor Name & Address:',    details.get('sponsor_name_address', '')),
+    ]
+    story.append(info_table(detail_rows, styles, col_w=(2.5 * inch, 4 * inch)))
+    story.append(sp(8))
+
+    gcp = s(details.get('gcp_statement', ''))
+    if gcp:
+        story.append(h2('GCP Statement', styles))
+        story.append(para(gcp, styles))
+
+    approval_stmt = s(details.get('approval_statement', ''))
+    if approval_stmt:
+        story.append(h2('Approval Statement', styles))
+        story.append(para(approval_stmt, styles))
+
+    def render_rep(rep, label):
+        story.append(h2(label, styles))
+        rep_rows = [
+            ('Name:', rep.get('name', '')), ('Title:', rep.get('title', '')),
+            ('Organization:', rep.get('organization', '')), ('Date:', rep.get('date', '')),
+        ]
+        story.append(info_table(rep_rows, styles, col_w=(2 * inch, 4.5 * inch)))
+        story.append(sp(4))
+
+        sig_url = rep.get('signature')
+        stream = get_image_stream(sig_url)
+        story.append(Paragraph('<b>Signature:</b>', styles['PNormal']))
+        if stream:
+            try:
+                story.append(Image(stream, width=1.5 * inch, height=0.5 * inch, kind='proportional'))
+            except Exception:
+                story.append(para('____________________', styles))
+        else:
+            story.append(para('____________________', styles))
+        story.append(sp(6))
+
+    for rep in (approval.get('sponsor_reps') or []):
+        render_rep(rep, 'Sponsor Representative')
+
+    for rep in (approval.get('cro_reps') or []):
+        render_rep(rep, 'CRO Representative')
+
+    agree = approval.get('investigator_agreement') or {}
+    if any(safe(v) for k, v in agree.items() if k != 'signature'):
+        story.append(h2('Investigator Agreement', styles))
+        desc = s(agree.get('description', ''))
+        if desc:
+            story.append(para(desc, styles))
+
+        agree_rows = [
+            ('Investigator Name:', agree.get('name', '')),
+            ('Title:', agree.get('title', '')),
+            ('Facility:', agree.get('facility', '')),
+            ('City:', agree.get('city', '')),
+            ('State:', agree.get('state', '')),
+            ('Date:', agree.get('date', '')),
+        ]
+        story.append(info_table(agree_rows, styles, col_w=(2 * inch, 4.5 * inch)))
+        story.append(sp(4))
+
+        sig_url = agree.get('signature')
+        stream = get_image_stream(sig_url)
+        story.append(Paragraph('<b>Signature:</b>', styles['PNormal']))
+        if stream:
+            try:
+                story.append(Image(stream, width=1.5 * inch, height=0.5 * inch, kind='proportional'))
+            except Exception:
+                story.append(para('____________________', styles))
+        else:
+            story.append(para('____________________', styles))
+
+    section_break(story)
+
+
+def _safe_list(lst):
+    return [x for x in (lst or []) if x]
+
+
+def build_synopsis(story, pd, styles):
+    s_data = pd.get('synopsis_data') or {}
+    overview = s_data.get('overview') or {}
+    objectives = s_data.get('objectives') or {}
+    endpoints = s_data.get('endpoints') or {}
+    inclusion = s_data.get('inclusion') or {}
+    exclusion = s_data.get('exclusion') or {}
+    team = s_data.get('team') or {}
+
+    story.append(h2('1.1 Synopsis', styles))
+
+    ov_rows = [
+        ('Title:', overview.get('title', '')),
+        ('Clinical Phase:', overview.get('clinical_phase', '')),
+        ('Coordinating Investigator:', overview.get('coordinating_investigator', '')),
+        ('Expert Committee:', overview.get('expert_committee', '')),
+        ('Investigators:', overview.get('investigators', '')),
+        ('Trial Sites:', overview.get('trial_sites', '')),
+        ('Planned Study Period:', overview.get('planned_period', '')),
+        ('FPFV:', overview.get('fpfv', '')),
+        ('LPLV:', overview.get('lplv', '')),
+        ('Number of Patients:', s_data.get('num_patients', '')),
+    ]
+    story.append(info_table(ov_rows, styles, col_w=(2.5 * inch, 4 * inch)))
+    story.append(sp(8))
+
+    def render_items(heading, items):
+        if _safe_list(items):
+            story.append(h3(heading, styles))
+            for item in items:
+                text = safe(item) if not isinstance(item, dict) else safe(item.get('text', str(item)))
+                if text:
+                    story.append(bullet(text, styles))
+
+    render_items('Primary Objectives', objectives.get('primary', []))
+    render_items('Secondary Objectives', objectives.get('secondary', []))
+    render_items('Exploratory Objectives', objectives.get('exploratory', []))
+    render_items('Primary Endpoints', endpoints.get('primary', []))
+    render_items('Secondary Endpoints', endpoints.get('secondary', []))
+    render_items('Exploratory Endpoints', endpoints.get('exploratory', []))
+
+    inc_text = s(inclusion.get('text', ''))
+    inc_points = _safe_list(inclusion.get('points', []))
+    if inc_text or inc_points:
+        story.append(h3('Inclusion Criteria', styles))
+        if inc_text:
+            story.append(para(inc_text, styles))
+        for pt in inc_points:
+            story.append(bullet(safe(pt), styles))
+
+    exc_text = s(exclusion.get('text', ''))
+    exc_points = _safe_list(exclusion.get('points', []))
+    if exc_text or exc_points:
+        story.append(h3('Exclusion Criteria', styles))
+        if exc_text:
+            story.append(para(exc_text, styles))
+        for pt in exc_points:
+            story.append(bullet(safe(pt), styles))
+
+    stat = s(s_data.get('statistical_methods', ''))
+    if stat:
+        story.append(h3('Statistical Methods', styles))
+        story.append(para(stat, styles))
+
+    inv_desc = s(team.get('investigator_desc', ''))
+    if inv_desc:
+        story.append(h3('Investigators', styles))
+        story.append(para(inv_desc, styles))
+    coord_desc = s(team.get('coordinator_desc', ''))
+    if coord_desc:
+        story.append(h3('Coordinating Investigator', styles))
+        story.append(para(coord_desc, styles))
+
+    # Flowcharts
+    flowcharts = s_data.get('flowcharts') or []
+    if flowcharts:
+        fc_title = s(s_data.get('flowchart_title', 'Study Schema / Flowchart'))
+        story.append(h3(fc_title, styles))
+        fc_desc = s(s_data.get('flowchart_description', ''))
+        if fc_desc:
+            story.append(para(fc_desc, styles))
+        for fc in flowcharts:
+            url = fc.get('url') if isinstance(fc, dict) else fc
+            img = build_image_flowable(url)
+            if img:
+                story.append(img)
+            cap = fc.get('caption', '') if isinstance(fc, dict) else ''
+            if s(cap):
+                story.append(Paragraph(f'<b>{s(cap)}</b>', styles['PCaption']))
+            story.append(sp(8))
+
+    # Custom tables
+    for t in (s_data.get('tables') or []):
+        headers = t.get('headers', [])
+        rows = t.get('rows', [])
+        if not headers:
+            continue
+        tbl_title = s(t.get('title', ''))
+        if tbl_title:
+            story.append(h3(tbl_title, styles))
+        tbl = dynamic_table(headers, rows, styles)
+        if tbl:
+            story.append(tbl)
+    story.append(sp(8))
+
+
+def build_schema(story, pd, styles):
+    schema = pd.get('schema_data') or {}
+    images = schema.get('images') or []
+    if not images and schema.get('image_url'):
+        images = [{'url': schema['image_url'], 'caption': schema.get('caption', ''), 'description': schema.get('description', '')}]
+    if not images:
+        return
+
+    story.append(h2('1.2 Schema', styles))
+    for img_obj in images:
+        url = img_obj.get('url') if isinstance(img_obj, dict) else img_obj
+        img = build_image_flowable(url)
+        if img:
+            story.append(img)
+        cap = img_obj.get('caption', '') if isinstance(img_obj, dict) else ''
+        desc = img_obj.get('description', '') if isinstance(img_obj, dict) else ''
+        if s(cap):
+            story.append(Paragraph(f'<b>{s(cap)}</b>', styles['PCaption']))
+        if s(desc):
+            story.append(para(desc, styles))
+        story.append(sp(8))
+
+
+def build_soa(story, pd, styles):
+    soa = pd.get('soa_data') or {}
+    soa_img = soa.get('image') or {}
+    soa_tbl = soa.get('table') or {}
+
+    if not soa_img.get('url') and not soa_tbl.get('headers'):
+        return
+
+    story.append(h2('1.3 Schedule of Activities (SoA)', styles))
+
+    if soa_img.get('url'):
+        img = build_image_flowable(soa_img['url'])
+        if img:
+            story.append(img)
+        if s(soa_img.get('caption', '')):
+            story.append(Paragraph(f'<b>{s(soa_img["caption"])}</b>', styles['PCaption']))
+        if s(soa_img.get('description', '')):
+            story.append(para(soa_img['description'], styles))
+        story.append(sp(8))
+
+    headers = soa_tbl.get('headers', [])
+    rows = soa_tbl.get('rows', {})
+    if headers:
+        # Split heavy tables into multiple parts if they have many columns
+        MAX_COLS = 13  # Max columns (including Procedures) per table
+        all_cols = list(headers)
+        num_header_cols = len(all_cols)
         
-        # Only add heading if there is content to render
-        if soa_data.get('image') or soa_data.get('table'):
-            story.append(Paragraph("1.3 Schedule of Activities (SoA)", styles['PDFHeader2']))
+        # Determine number of split tables needed
+        # Each part will have 'Procedures' + some window of columns
+        col_indices_list = list(range(num_header_cols))
+        parts = []
+        for i in range(0, num_header_cols, (MAX_COLS - 1)):
+            parts.append(col_indices_list[i : i + (MAX_COLS - 1)])
         
-        # Render Image if exists
-        soa_image = soa_data.get('image')
-        if soa_image and soa_image.get('url'):
-            ip = soa_image['url'].lstrip('/')
-            if os.path.exists(ip):
-                try: story.append(Image(ip, width=6*inch, height=4*inch, kind='proportional'))
-                except: pass
-            if soa_image.get('caption'): story.append(Paragraph(f"<b>{sanitize_pdf_text(soa_image['caption'])}</b>", styles['PDFTable']))
-            if soa_image.get('description'): story.append(Paragraph(sanitize_pdf_text(soa_image['description']), styles['PDFNormal']))
-            story.append(Spacer(1, 0.2*inch))
+        for p_idx, sub_indices in enumerate(parts):
+            sub_headers = [all_cols[i] for i in sub_indices]
+            col_headers = ['Procedures'] + sub_headers
+            num_cols = len(col_headers)
             
-        if soa_data.get('table'):
-            soa_table_data = soa_data['table']
-            headers = soa_table_data.get('headers', [])
-            rows = soa_table_data.get('rows', [])
+            # Widths: 2.0 inch for Procedures, then distribute remaining 4.5 inches
+            c_w = [1.8 * inch] + [(4.7 * inch) / (num_cols - 1)] * (num_cols - 1)
             
-            data = []
+            data = [[Paragraph(s(h), styles['PTable']) for h in col_headers]]
+            
             if isinstance(rows, dict):
-                data = [["Procedures"] + [sanitize_pdf_text(h) for h in headers]]
-                for proc, checks in rows.items(): 
-                    data.append([sanitize_pdf_text(proc)] + ["X" if c else "" for c in checks])
+                for proc, checks in rows.items():
+                    r_vals = [Paragraph(s(proc), styles['PTable'])]
+                    for i in sub_indices:
+                        val = checks[i] if i < len(checks) else False
+                        r_vals.append(Paragraph('X' if val else '', styles['PTable']))
+                    data.append(r_vals)
             elif isinstance(rows, list):
-                if headers:
-                    data = [[sanitize_pdf_text(str(h)) for h in headers]]
-                    for row in rows:
-                        data.append([sanitize_pdf_text(str(c)) for c in row])
+                # If rows is a list of lists [ [proc, v1, v2...], ... ]
+                for r in rows:
+                    if not r: continue
+                    proc_val = r[0]
+                    r_vals = [Paragraph(s(str(proc_val)), styles['PTable'])]
+                    for i in sub_indices:
+                        val = r[i + 1] if (i + 1) < len(r) else ''
+                        r_vals.append(Paragraph(s(str(val)), styles['PTable']))
+                    data.append(r_vals)
             
             if len(data) > 1:
-                soa_table = Table(data)
-                soa_table.setStyle(TableStyle([('FONTSIZE', (0,0), (-1,-1), 6), ('GRID', (0,0), (-1,-1), 0.5, colors.black), ('BACKGROUND', (0,0), (-1,0), colors.lightgrey)]))
-                story.append(soa_table)
-            
-    sections = protocol_data.get('sections', {})
-    for section_num in range(2, 12):
-        section_key = str(section_num)
-        template_section = next((s for s in TEMPLATE_STRUCTURE if s['id'] == section_num), None)
-        if section_key in sections or template_section: 
-            story.append(Paragraph(f"{section_num} {template_section['title'] if template_section else ''}", styles['PDFHeader1']))
-            if section_key in sections:
-                sec_data = sections[section_key]
-                if sec_data.get('main'): story.append(Paragraph(sanitize_pdf_text(sec_data['main']), styles['PDFNormal']))
-                if sec_data.get('subsections'):
-                    for sub in sec_data['subsections']:
-                        if sub.get('title'): story.append(Paragraph(sanitize_pdf_text(sub['title']), styles['PDFHeader2']))
-                        if sub.get('content'): story.append(Paragraph(sanitize_pdf_text(sub['content']), styles['PDFNormal']))
-                
-                if sec_data.get('images'):
-                    for img_obj in sec_data['images']:
-                        if img_obj.get('url'):
-                            ip = img_obj['url'].lstrip('/')
-                            if os.path.exists(ip):
-                                try: story.append(Image(ip, width=6*inch, height=4*inch, kind='proportional'))
-                                except: pass
-                        if img_obj.get('caption'): story.append(Paragraph(f"<b>{sanitize_pdf_text(img_obj['caption'])}</b>", styles['PDFTable']))
-                        if img_obj.get('description'): story.append(Paragraph(sanitize_pdf_text(img_obj['description']), styles['PDFNormal']))
-                if sec_data.get('subsections'):
-                    for i, sub in enumerate(sec_data['subsections']):
-                        if isinstance(sub, dict):
-                            story.append(Paragraph(f"{section_num}.{i+1} {sanitize_pdf_text(sub.get('title',''))}", styles['PDFHeader2']))
-                            if sub.get('content'): story.append(Paragraph(sanitize_pdf_text(sub['content']), styles['PDFNormal']))
-                            if sub.get('images'):
-                                for img_obj in sub['images']:
-                                    if img_obj.get('url'):
-                                        ip = img_obj['url'].lstrip('/')
-                                        if os.path.exists(ip):
-                                            try: story.append(Image(ip, width=6*inch, height=4*inch, kind='proportional'))
-                                            except: pass
-                                    if img_obj.get('caption'): story.append(Paragraph(f"<b>{sanitize_pdf_text(img_obj['caption'])}</b>", styles['PDFTable']))
-                                    if img_obj.get('description'): story.append(Paragraph(sanitize_pdf_text(img_obj['description']), styles['PDFNormal']))
-                            
-                            if sub.get('customTable'):
-                                c_table = sub['customTable']
-                                headers = c_table.get('headers', [])
-                                rows = c_table.get('rows', [])
-                                if headers and rows:
-                                    t_data = [[sanitize_pdf_text(str(h)) for h in headers]]
-                                    for row in rows:
-                                        t_data.append([sanitize_pdf_text(str(c)) for c in row])
-                                    if len(t_data) > 1:
-                                        dyn_table = Table(t_data)
-                                        dyn_table.setStyle(TableStyle([
-                                            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                                            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                                            ('FONTSIZE', (0, 0), (-1, -1), 8),
-                                            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-                                            ('WORDWRAP', (0, 0), (-1, -1), True),
-                                        ]))
-                                        story.append(dyn_table)
-                        elif isinstance(sub, str): story.append(Paragraph(f"{section_num}.{i+1} {sanitize_pdf_text(sub)}", styles['PDFHeader2']))
-    
-    custom_keys = sorted([k for k in sections.keys() if k.isdigit() and int(k) > 11], key=lambda x: int(x))
-    for k in custom_keys:
-        sec = sections[k]
-        story.append(Paragraph(f"{k} {sanitize_pdf_text(sec.get('title', 'Section'))}", styles['PDFHeader1']))
-        if sec.get('main'): story.append(Paragraph(sanitize_pdf_text(sec['main']), styles['PDFNormal']))
-        if sec.get('images'):
-            for img_obj in sec['images']:
-                if img_obj.get('url'):
-                    ip = img_obj['url'].lstrip('/')
-                    if os.path.exists(ip):
-                        try: story.append(Image(ip, width=6*inch, height=4*inch, kind='proportional'))
-                        except: pass
-                if img_obj.get('caption'): story.append(Paragraph(f"<b>{sanitize_pdf_text(img_obj['caption'])}</b>", styles['PDFTable']))
-                if img_obj.get('description'): story.append(Paragraph(sanitize_pdf_text(img_obj['description']), styles['PDFNormal']))
-    
-    # Use onPage parameter to draw header/footer on every page
-    doc.build(story, onFirstPage=lambda canvas, doc: draw_header_footer(canvas, doc, protocol_data),
-              onLaterPages=lambda canvas, doc: draw_header_footer(canvas, doc, protocol_data))
+                if p_idx > 0:
+                    story.append(Paragraph(f'<b>Schedule of Activities (Continued - Part {p_idx+1})</b>', styles['PH3']))
+                t = Table(data, colWidths=c_w, repeatRows=1)
+                t.setStyle(TableStyle([
+                    ('FONTSIZE',   (0, 0), (-1, -1), 7),
+                    ('GRID',       (0, 0), (-1, -1), 0.5, colors.black),
+                    ('BACKGROUND', (0, 0), (-1, 0),  colors.lightgrey),
+                    ('ALIGN',      (1, 0), (-1, -1),  'CENTER'),
+                    ('VALIGN',     (0, 0), (-1, -1),  'MIDDLE'),
+                ]))
+                story.append(t)
+                story.append(sp(12))
+    story.append(sp(8))
+
+
+def build_section3(story, pd, styles):
+    s3 = pd.get('section3') or {}
+    legacy = pd.get('objectives_endpoints', [])
+
+    desc = s(s3.get('description', ''))
+    tbl = s3.get('table') or {}
+    img = s3.get('image') or {}
+
+    if not desc and not tbl.get('headers') and not img.get('url') and not legacy:
+        return
+
+    if desc:
+        story.append(para(desc, styles))
+
+    if img.get('url'):
+        flowable = build_image_flowable(img['url'])
+        if flowable:
+            story.append(flowable)
+        if s(img.get('caption', '')):
+            story.append(Paragraph(f'<b>Figure: {s(img["caption"])}</b>', styles['PCaption']))
+        if s(img.get('description', '')):
+            story.append(para(img['description'], styles))
+        story.append(sp(6))
+
+    if tbl.get('headers'):
+        t = dynamic_table(tbl['headers'], tbl.get('rows', []), styles)
+        if t:
+            story.append(t)
+    elif legacy:
+        headers = ['Type', 'Objectives', 'Endpoints and Justification']
+        rows = []
+        for obj in legacy:
+            ep = s(obj.get('Endpoint', ''))
+            just = s(obj.get('Justification', ''))
+            cell3 = f'{ep}\n\nJustification: {just}' if just else ep
+            rows.append([s(obj.get('Type', '')), s(obj.get('Objective', '')), cell3])
+        t = dynamic_table(headers, rows, styles)
+        if t:
+            story.append(t)
+    story.append(sp(8))
+
+
+def _add_images_to_story(story, images, styles):
+    for img_obj in (images or []):
+        url = img_obj.get('url') if isinstance(img_obj, dict) else img_obj
+        flowable = build_image_flowable(url)
+        if flowable:
+            story.append(flowable)
+        cap = img_obj.get('caption', '') if isinstance(img_obj, dict) else ''
+        desc = img_obj.get('description', '') if isinstance(img_obj, dict) else ''
+        if s(cap):
+            story.append(Paragraph(f'<b>{s(cap)}</b>', styles['PCaption']))
+        if s(desc):
+            story.append(para(desc, styles))
+        story.append(sp(6))
+
+
+TEMPLATE_STRUCTURE = [
+    {'id': 1,  'title': 'PROTOCOL SUMMARY'},
+    {'id': 2,  'title': 'INTRODUCTION'},
+    {'id': 3,  'title': 'OBJECTIVES AND ENDPOINTS'},
+    {'id': 4,  'title': 'STUDY DESIGN'},
+    {'id': 5,  'title': 'STUDY POPULATION'},
+    {'id': 6,  'title': 'STUDY INTERVENTION'},
+    {'id': 7,  'title': 'STUDY INTERVENTION DISCONTINUATION AND PARTICIPANT DISCONTINUATION/WITHDRAWAL'},
+    {'id': 8,  'title': 'STUDY ASSESSMENTS AND PROCEDURES'},
+    {'id': 9,  'title': 'STATISTICAL CONSIDERATIONS'},
+    {'id': 10, 'title': 'SUPPORTING DOCUMENTATION AND OPERATIONAL CONSIDERATIONS'},
+    {'id': 11, 'title': 'REFERENCES'},
+]
+
+
+def build_generic_sections(story, pd, styles):
+    sections = pd.get('sections') or {}
+
+    for sec_num in range(2, 12):
+        sec_key = str(sec_num)
+        template = next((t for t in TEMPLATE_STRUCTURE if t['id'] == sec_num), None)
+        sec_title = f"{sec_num} {template['title']}" if template else f"{sec_num} SECTION {sec_num}"
+
+        story.append(h1(sec_title, styles))
+
+        sec_data = sections.get(sec_key) or {}
+        main_text = s(sec_data.get('main', ''))
+        if main_text:
+            story.append(para(main_text, styles))
+
+        _add_images_to_story(story, sec_data.get('images') or [], styles)
+
+        subs = sec_data.get('subsections') or []
+
+        if isinstance(subs, list):
+            for i, sub in enumerate(subs):
+                if isinstance(sub, dict):
+                    sub_title = s(sub.get('title', ''))
+                    sub_content = s(sub.get('content', ''))
+                    story.append(h2(f'{sec_num}.{i+1} {sub_title}', styles))
+                    if sub_content:
+                        story.append(para(sub_content, styles))
+                    _add_images_to_story(story, sub.get('images') or [], styles)
+
+                    # Custom table inside subsection
+                    c_tbl = sub.get('customTable') or {}
+                    if c_tbl.get('headers'):
+                        t = dynamic_table(c_tbl['headers'], c_tbl.get('rows', []), styles)
+                        if t:
+                            story.append(t)
+
+                elif isinstance(sub, str) and sub.strip():
+                    story.append(h2(f'{sec_num}.{i+1} {s(sub)}', styles))
+
+        elif isinstance(subs, dict):
+            for idx, content in sorted(subs.items(), key=lambda x: int(x[0])):
+                if content:
+                    story.append(h2(f'{sec_num}.{int(idx)+1} Subsection', styles))
+                    story.append(para(str(content), styles))
+
+        # Section 10: Abbreviations & Amendment History
+        if sec_num == 10:
+            abbrevs = pd.get('abbreviations') or sec_data.get('abbreviations') or []
+            if abbrevs:
+                story.append(h2('Abbreviations', styles))
+                rows = [[s(ab.get('Abbreviation', ab.get('abbreviation', ''))),
+                         s(ab.get('Full Form', ab.get('full_form', '')))]
+                        for ab in abbrevs]
+                t = dynamic_table(['Abbreviation', 'Full Form'], rows, styles)
+                if t:
+                    story.append(t)
+
+            amendments = pd.get('amendment_history') or sec_data.get('amendment_history') or []
+            if amendments:
+                story.append(h2('Protocol Amendment History', styles))
+                rows = [[s(am.get('Version', am.get('version', ''))),
+                         s(am.get('Date', am.get('date', ''))),
+                         s(am.get('Description', am.get('description', ''))),
+                         s(am.get('Rationale', am.get('rationale', '')))]
+                        for am in amendments]
+                t = dynamic_table(['Version', 'Date', 'Description of Change', 'Brief Rationale'], rows, styles)
+                if t:
+                    story.append(t)
+
+        story.append(PageBreak())
+
+
+# ============================================================================
+# MAIN ENTRY POINT
+# ============================================================================
+
+def generate_pdf_document(protocol_data):
+    """Generate PDF document matching the Prot_1 reference structure."""
+    pd_data = protocol_data  # alias
+
+    output_dir = 'generated_docs'
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    version = safe(pd_data.get('version_number', 'v1.0')).replace('.', '_').replace(' ', '_')
+    filename = f'protocol_{version}_{timestamp}.pdf'
+    filepath = os.path.join(output_dir, filename)
+
+    doc = SimpleDocTemplate(
+        filepath,
+        pagesize=letter,
+        rightMargin=inch,
+        leftMargin=inch,
+        topMargin=inch,
+        bottomMargin=inch
+    )
+
+    styles = build_styles()
+    story = []
+
+    # ═══ TITLE PAGE ═══
+    build_title_page(story, pd_data, styles)
+
+    # ═══ PROTOCOL APPROVAL & AGREEMENT ═══
+    build_approval_section(story, pd_data, styles)
+
+    # ═══ STATEMENT OF COMPLIANCE ═══
+    story.append(h1('STATEMENT OF COMPLIANCE', styles))
+    compliance = (
+        'The trial will be carried out in accordance with International Conference on Harmonisation Good '
+        'Clinical Practice (ICH GCP) and the following: '
+        '(1) United States (US) Code of Federal Regulations (CFR) applicable to clinical studies '
+        '(45 CFR Part 46, 21 CFR Part 50, 21 CFR Part 56, 21 CFR Part 312, and/or 21 CFR Part 812). '
+        '(2) NIH-funded investigators and clinical trial site staff who are responsible for the conduct, '
+        'management, or oversight of NIH-funded clinical trials have completed Human Subjects Protection '
+        'and ICH GCP Training. '
+        '(3) The protocol, informed consent form(s), recruitment materials, and all participant materials '
+        'will be submitted to the IRB for review and approval before any participant is enrolled.'
+    )
+    story.append(para(compliance, styles))
+    story.append(PageBreak())
+
+    # ═══ TABLE OF CONTENTS ═══
+    story.append(h1('TABLE OF CONTENTS', styles))
+    toc_items = ['STATEMENT OF COMPLIANCE', 'PROTOCOL APPROVAL & AGREEMENT', '1 PROTOCOL SUMMARY']
+    for t in TEMPLATE_STRUCTURE:
+        if t['id'] > 1:
+            toc_items.append(f"{t['id']} {t['title']}")
+    toc_items.append('APPENDICES')
+    for item in toc_items:
+        story.append(bullet(item, styles))
+    story.append(PageBreak())
+
+    # ═══ SECTION 1: PROTOCOL SUMMARY ═══
+    story.append(h1('1 PROTOCOL SUMMARY', styles))
+    build_synopsis(story, pd_data, styles)
+    build_schema(story, pd_data, styles)
+    build_soa(story, pd_data, styles)
+    story.append(PageBreak())
+
+    # ═══ SECTION 3 (standalone before rest) ═══
+    story.append(h1('3 OBJECTIVES AND ENDPOINTS', styles))
+    build_section3(story, pd_data, styles)
+
+    # ═══ SECTIONS 2, 4–11 ═══
+    build_generic_sections(story, pd_data, styles)
+
+    # ═══ APPENDICES ═══
+    appendices = pd_data.get('appendices') or []
+    if appendices:
+        story.append(h1('APPENDICES', styles))
+        for i, appendix in enumerate(appendices, 1):
+            story.append(h2(f'Appendix {i}', styles))
+            app_title = s(appendix.get('title', ''))
+            app_content = s(appendix.get('content', ''))
+            if app_title:
+                story.append(para(app_title, styles))
+            if app_content:
+                story.append(para(app_content, styles))
+
+    hf = partial(draw_header_footer, pd=pd_data)
+    doc.build(story, onFirstPage=hf, onLaterPages=hf)
     return filepath
+
+
 def generate_interpreted_pdf_report(protocol_id):
-    """
-    Generates a specialized PDF report containing only the 12 interpreted fields.
-    Highlights low-confidence extractions in red.
-    """
+    """Generates a specialized PDF report for the 12 interpreted fields."""
     from database import execute_query
-    
-    # 1. Fetch data
+
     query = "SELECT field_name, field_value, confidence_score FROM protocol_interpretation WHERE protocol_id = %s ORDER BY field_name"
     data = execute_query(query, (protocol_id,), fetch=True)
-    
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
     styles = getSampleStyleSheet()
     elements = []
-    
-    # Header styled as a paragraph for simplicity in SimpleDocTemplate
-    header_style = ParagraphStyle(
-        'HeaderStyle',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.grey,
-        alignment=2 # Right
-    )
-    elements.append(Paragraph(f"Protocol Interpretation Report | ID: {protocol_id} | Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", header_style))
-    elements.append(Spacer(1, 0.2*inch))
-    
-    # Title
-    elements.append(Paragraph("Protocol Interpretation Report", styles['Title']))
-    elements.append(Spacer(1, 0.2*inch))
-    
-    elements.append(Paragraph("This report summarizes the core study parameters extracted and interpreted from the protocol source data.", styles['Normal']))
-    elements.append(Spacer(1, 0.2*inch))
-    
-    # 2. Build Content (Non-Tabular)
-    for item in data:
+
+    header_style = ParagraphStyle('HeaderStyle', parent=styles['Normal'], fontSize=9,
+                                  textColor=colors.grey, alignment=2)
+    elements.append(Paragraph(
+        f"Protocol Interpretation Report | ID: {protocol_id} | Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        header_style
+    ))
+    elements.append(Spacer(1, 0.2 * inch))
+    elements.append(Paragraph('Protocol Interpretation Report', styles['Title']))
+    elements.append(Spacer(1, 0.2 * inch))
+    elements.append(Paragraph('This report summarizes the core study parameters extracted and interpreted from the protocol source data.', styles['Normal']))
+    elements.append(Spacer(1, 0.2 * inch))
+
+    for item in (data or []):
         fname = str(item['field_name'])
         fval = str(item['field_value'])
         conf = float(item['confidence_score'] or 1.0)
-        
-        # Field Name as Section Header
+
         elements.append(Paragraph(fname, styles['Heading2']))
-        
-        # Field Value
         if conf < 1.0:
-            # Red color for low confidence
             red_style = ParagraphStyle('RedVal', parent=styles['Normal'], textColor=colors.red)
             elements.append(Paragraph(f"{fval} <i>(Confidence: {int(conf * 100)}%)</i>", red_style))
         else:
             elements.append(Paragraph(fval, styles['Normal']))
-        
-        elements.append(Spacer(1, 0.1*inch))
-    
-    footer_text = "<br/><br/><font color='grey' size='8'>Note: Fields highlighted in red indicate lower extraction confidence and should be manually verified by a domain expert.</font>"
+        elements.append(Spacer(1, 0.1 * inch))
+
+    footer_text = "<br/><br/><font color='grey' size='8'>Note: Fields highlighted in red indicate lower extraction confidence and should be manually verified.</font>"
     elements.append(Paragraph(footer_text, styles['Normal']))
-    
+
     doc.build(elements)
     buffer.seek(0)
     return buffer

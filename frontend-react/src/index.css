@@ -800,8 +800,8 @@ h1, h2, h3, h4 {
 }
 
 /* Ensure Sticky Headers stay TOP and LEFT */
-.soa-table th:nth-child(1) { z-index: 70; }
-.soa-table th:nth-child(2) { z-index: 60; }
+.soa-table th:nth-child(1) { z-index: 110; }
+.soa-table th:nth-child(2) { z-index: 110; }
 
 /* 4. Column-Specific Cell Backgrounds */
 .soa-action-cell {

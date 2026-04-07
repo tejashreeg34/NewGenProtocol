@@ -129,27 +129,30 @@ const Interpretation = () => {
               <table style={{ borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                   <tr>
-                    <th style={{ padding: '12px', background: '#F8FAFC', border: '1px solid var(--border-color)', textAlign: 'left', minWidth: '200px', fontSize: '0.85rem' }}>Assessment</th>
                     {soa_table.headers.map((h, i) => (
-                      <th key={i} style={{ padding: '12px', background: '#F8FAFC', border: '1px solid var(--border-color)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={i} style={{ padding: '12px', background: '#F8FAFC', border: '1px solid var(--border-color)', textAlign: i === 0 ? 'left' : 'center', minWidth: i === 0 ? '200px' : 'auto', fontSize: i === 0 ? '0.85rem' : '0.8rem', whiteSpace: 'nowrap' }}>
+                        {i === 0 ? 'Assessment' : h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(soa_table.rows).map(([rowName, checks], rIdx) => {
-                    const hasAnyCheck = checks.some(c => c === true);
-                    if (!hasAnyCheck) return null; // Only show rows with at least one check
+                  {Array.isArray(soa_table.rows) ? soa_table.rows.map((rowArr, rIdx) => {
+                    const rowName = rowArr[0];
+                    const checks = rowArr.slice(1).map(v => v === '1');
+                    const hasAnyCheck = checks.some(c => c);
+                    if (!hasAnyCheck && (!rowName || rowName.trim() === '')) return null; // Only show if there's a name or check
                     return (
                       <tr key={rIdx}>
                         <td style={{ padding: '12px', border: '1px solid var(--border-color)', fontSize: '0.9rem', fontWeight: 600 }}>{rowName}</td>
                         {checks.map((isChecked, cIdx) => (
-                          <td key={cIdx} style={{ padding: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
-                            {isChecked ? <div style={{ width: '12px', height: '12px', background: 'var(--primary-lime)', borderRadius: '50%', margin: '0 auto' }}></div> : ''}
+                          <td key={cIdx} style={{ padding: '12px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                            {isChecked ? 'X' : ''}
                           </td>
                         ))}
                       </tr>
                     )
-                  })}
+                  }) : null}
                 </tbody>
               </table>
             </div>

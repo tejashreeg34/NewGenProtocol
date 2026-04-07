@@ -14,12 +14,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from document_generator import generate_complete_word_document, generate_interpreted_word_report
+from word_generator import generate_complete_word_document
+from document_generator import generate_interpreted_word_report
 from pdf_generator import generate_pdf_document, generate_interpreted_pdf_report
 from qc_engine import qc_engine
 from database import init_db, execute_query
 from storage_engine import storage_engine
 from section_pdf_generator import section_pdf_generator
+from document_parser import document_parser
 from fastapi.responses import StreamingResponse
 import io
 
@@ -447,11 +449,11 @@ async def get_protocol(protocol_id: str):
 @app.post("/api/generate-word")
 async def generate_word(data: ProtocolData):
     try:
-        file_path = generate_complete_word_document(data.dict())
-
+        logger.info(f"Generating Word document for version {data.version_number}")
+        file_path = generate_complete_word_document(data.model_dump())
+        logger.info(f"Word document generated: {file_path}")
         with open(file_path, 'rb') as f:
             file_content = f.read()
-
         return StreamingResponse(
             io.BytesIO(file_content),
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -461,16 +463,17 @@ async def generate_word(data: ProtocolData):
             }
         )
     except Exception as e:
+        logger.error(f"Failed to generate Word document: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate Word document: {str(e)}")
 
 @app.post("/api/generate-pdf")
 async def generate_pdf(data: ProtocolData):
     try:
-        file_path = generate_pdf_document(data.dict())
-        
+        logger.info(f"Generating PDF document for version {data.version_number}")
+        file_path = generate_pdf_document(data.model_dump())
+        logger.info(f"PDF document generated: {file_path}")
         with open(file_path, 'rb') as f:
             file_content = f.read()
-
         return StreamingResponse(
             io.BytesIO(file_content),
             media_type="application/pdf",
@@ -480,7 +483,7 @@ async def generate_pdf(data: ProtocolData):
             }
         )
     except Exception as e:
-        logger.error(f"Error in generate_pdf: {str(e)}")
+        logger.error(f"Error in generate_pdf: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate PDF document: {str(e)}")
 
 @app.post("/api/upload-image")
@@ -511,6 +514,71 @@ async def upload_image(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
+
+
+@app.post("/api/parse-protocol-document")
+async def parse_protocol_document(file: UploadFile = File(...)):
+    """
+    Accepts a .docx or .pdf protocol document, parses it using
+    document_parser.py, and returns structured JSON matching the
+    ProtocolContext shape so the frontend can auto-populate all fields.
+    """
+    try:
+        allowed_extensions = ['.docx', '.doc', '.pdf']
+        filename = file.filename or 'upload'
+        ext = os.path.splitext(filename)[1].lower()
+        if ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type '{ext}'. Please upload a .docx, .doc, or .pdf file."
+            )
+
+        content = await file.read()
+        if len(content) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        logger.info(f"Parsing protocol document: {filename} ({len(content)} bytes)")
+
+        upload_dir = "uploads"
+        parsed_data = document_parser.parse(content, filename, upload_dir)
+
+        # Count how many fields were extracted for reporting
+        extracted_count = sum([
+            1 if parsed_data.get('protocol_title') else 0,
+            1 if parsed_data.get('protocol_number') else 0,
+            1 if parsed_data.get('nct_number') else 0,
+            1 if parsed_data.get('principal_investigator') else 0,
+            1 if parsed_data.get('sponsor') else 0,
+            len(parsed_data.get('synopsis_data', {}).get('inclusion', {}).get('points', [])),
+            len(parsed_data.get('synopsis_data', {}).get('exclusion', {}).get('points', [])),
+            len(parsed_data.get('synopsis_data', {}).get('endpoints', {}).get('primary', [])),
+            len(parsed_data.get('sections', {})),
+        ])
+
+        soa_rows = len(parsed_data.get('soa_data', {}).get('table', {}).get('rows', []))
+        has_soa_image = bool(parsed_data.get('soa_data', {}).get('image'))
+
+        logger.info(f"Parsed '{filename}': {extracted_count} fields, {soa_rows} SoA rows, image={has_soa_image}")
+
+        return {
+            "status": "success",
+            "filename": filename,
+            "stats": {
+                "fields_extracted": extracted_count,
+                "sections_found": len(parsed_data.get('sections', {})),
+                "soa_rows": soa_rows,
+                "soa_image": has_soa_image,
+            },
+            "data": parsed_data
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.exception(f"Error parsing protocol document: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse document: {str(e)}")
 
 @app.post("/api/check-qc", response_model=List[QCReportItem])
 async def check_qc(data: ProtocolData):

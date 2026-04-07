@@ -16,6 +16,7 @@ import Generate from './components/Tabs/Generate';
 import Interpretation from './components/Tabs/Interpretation';
 import Dashboard from './components/Tabs/Dashboard';
 import TableOfContents from './components/Tabs/TableOfContents';
+import ImportDocument from './components/Tabs/ImportDocument';
 import { useProtocol } from './context/ProtocolContext';
 import GlobalModal from './components/Common/GlobalModal';
 import LoginPage from './components/Auth/LoginPage';
@@ -40,7 +41,7 @@ function App() {
   }, []);
 
   const handleGlobalSave = () => {
-    toast.success('Section data saved successfully', { icon: '💾' });
+    toast.success('Progress saved');
   };
 
   const handleGlobalClear = () => {
@@ -56,24 +57,24 @@ function App() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'title-page': return <TitlePage />;
-      case 'approval': return <ApprovalAgreement />;
-      case 'synopsis': return <Synopsis />;
-      case 'toc': return <TableOfContents />;
-      case 'sections': return <ProtocolSections />;
-      case 'qc': return <QCReport />;
-      case 'preview': return <Preview />;
-      case 'generate': return <Generate />;
-      case 'interpretation': return <Interpretation />;
-      case 'dashboard': return <Dashboard />;
-      default: return <TitlePage />;
+      case 'import':         return <ImportDocument />;
+      case 'title-page':    return <TitlePage />;
+      case 'approval':      return <ApprovalAgreement />;
+      case 'synopsis':      return <Synopsis />;
+      case 'toc':           return <TableOfContents />;
+      case 'sections':      return <ProtocolSections />;
+      case 'qc':            return <QCReport />;
+      case 'preview':       return <Preview />;
+      case 'generate':      return <Generate />;
+      case 'interpretation':return <Interpretation />;
+      case 'dashboard':     return <Dashboard />;
+      default:              return <ImportDocument />;
     }
   };
 
   if (!isAuthenticated) {
     return (
       <div className="app-container">
-        <Toaster position="top-right" />
         <LoginPage />
       </div>
     );
@@ -81,7 +82,6 @@ function App() {
 
   return (
     <div className="app-container">
-      <Toaster position="top-right" />
       <GlobalModal />
       <Sidebar 
         activeTab={activeTab} 
@@ -107,7 +107,7 @@ function App() {
           </AnimatePresence>
 
           {/* Section Action Bar - hidden on read-only tabs */}
-          {!['qc', 'preview', 'generate', 'interpretation', 'toc'].includes(activeTab) && (
+          {!['qc', 'preview', 'generate', 'interpretation', 'toc', 'import'].includes(activeTab) && (
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '16px' }}>
               <button className="btn" onClick={handleGlobalClear} style={{ background: 'transparent', color: '#EF4444', border: '1px solid #EF4444', padding: '8px 16px', fontSize: '0.85rem' }}>
                 <Trash2 size={16} /> Clear Section Data
@@ -123,14 +123,22 @@ function App() {
       <Toaster 
         position="bottom-right"
         toastOptions={{
+          duration: 3000,
           style: {
-            background: 'white',
-            color: 'var(--text-main)',
+            background: 'var(--dark-lime)',
+            color: 'white',
             borderRadius: '12px',
-            border: '1px solid var(--border-color)',
+            border: 'none',
             boxShadow: 'var(--shadow-lg)',
             padding: '16px',
-            fontFamily: 'Inter'
+            fontFamily: 'Inter',
+            fontWeight: 600
+          },
+          success: {
+            iconTheme: {
+              primary: 'white',
+              secondary: 'var(--dark-lime)',
+            },
           },
         }}
       />
