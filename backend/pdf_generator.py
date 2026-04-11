@@ -64,6 +64,10 @@ def sanitize(text):
             else:
                 sanitized += '?'
         text = sanitized
+        
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
     return text
 
 
