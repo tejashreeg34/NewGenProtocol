@@ -1,7 +1,81 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useProtocol } from '../../context/ProtocolContext';
 import { Database, FileText, Table as TableIcon, LayoutList, Image as ImageIcon } from 'lucide-react';
 
+
+// ─────────────────────────────────────────────────────────────────
+// Inline TOC tree for the Interpretation page (read-only)
+// ─────────────────────────────────────────────────────────────────
+const TocReadOnlyNode = ({ node, depth = 0 }) => {
+  const [isOpen, setIsOpen] = useState(depth < 1);
+  const hasChildren = node.children && node.children.length > 0;
+
+  return (
+    <div style={{ marginLeft: depth === 0 ? 0 : '20px' }}>
+      <div
+        onClick={hasChildren ? () => setIsOpen(o => !o) : undefined}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: depth === 0 ? '10px 0' : '6px 0',
+          borderBottom: depth === 0 ? '1px solid rgba(0,0,0,0.05)' : 'none',
+          cursor: hasChildren ? 'pointer' : 'default',
+        }}
+      >
+        {hasChildren ? (
+          <span style={{ color: '#94A3B8', flexShrink: 0 }}>
+            {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          </span>
+        ) : (
+          <span style={{ width: '13px', flexShrink: 0 }} />
+        )}
+
+        {node.number && (
+          <span style={{
+            fontSize: '0.72rem', fontWeight: 800,
+            color: depth === 0 ? '#1A5632' : '#94A3B8',
+            background: depth === 0 ? '#DCFCE7' : '#F1F5F9',
+            padding: '2px 7px', borderRadius: '5px',
+            flexShrink: 0, minWidth: '28px', textAlign: 'center',
+          }}>
+            {node.number}
+          </span>
+        )}
+
+        <span style={{
+          flex: 1,
+          fontSize: depth === 0 ? '0.92rem' : '0.83rem',
+          fontWeight: depth === 0 ? 700 : 400,
+          color: depth === 0 ? 'var(--text-main)' : 'var(--text-muted)',
+        }}>
+          {node.title}
+        </span>
+
+        {node.page && (
+          <span style={{
+            fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600,
+            background: '#F8FAFC', padding: '2px 8px', borderRadius: '5px', flexShrink: 0,
+          }}>
+            p.{node.page}
+          </span>
+        )}
+      </div>
+
+      {hasChildren && isOpen && (
+        <div style={{ borderLeft: '2px solid #E2E8F0', paddingLeft: '8px', marginTop: '2px', marginBottom: '4px' }}>
+          {node.children.map((child, idx) => (
+            <TocReadOnlyNode key={idx} node={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────────────────────────
 const Interpretation = () => {
   const { data } = useProtocol();
 
@@ -21,7 +95,7 @@ const Interpretation = () => {
     
     // Abbreviations extraction (if entered in CustomTabulation of 10.15)
     const abbrevTable = data.sections['10']?.subsections?.[14]?.customTable;
-    let abbrevText = "";
+    let abbrevText = '';
     if (abbrevTable && abbrevTable.rows?.length > 0) {
       abbrevText = abbrevTable.rows.map(r => `${r[0]}: ${r[1]}`).filter(x => x && x.trim() !== ': ').join('\n');
     }
@@ -30,10 +104,15 @@ const Interpretation = () => {
     return list;
   }, [data]);
 
-  // 2. Schedule of Activities
+  // 2. Schedule of Activities — fix: use .length directly (rows is an array)
   const soa_table = data.soa_data?.table;
+  const hasSoaTable = soa_table?.headers?.length > 0 && soa_table?.rows?.length > 0;
 
-  // 3. Extract Tables (Images with Captions AND Custom Tabulations)
+  // 3. TOC tree
+  const tocTree = data.sections?.['0']?.toc_tree;
+  const hasTocTree = Array.isArray(tocTree) && tocTree.length > 0;
+
+  // 4. Extract Tables (Images with Captions AND Custom Tabulations)
   const extractedTables = useMemo(() => {
     const tables = [];
     
@@ -43,13 +122,12 @@ const Interpretation = () => {
       if (!html) return;
       let match;
       while ((match = imgRegex.exec(html)) !== null) {
-        if (match[2] && match[2].trim() !== '') { // Has caption (alt text)
+        if (match[2] && match[2].trim() !== '') {
           tables.push({ type: 'image', url: match[1], caption: match[2], sectionTitle });
         }
       }
     };
 
-    // Iterate all sections and subsections
     Object.keys(data.sections || {}).forEach(secId => {
       const sec = data.sections[secId];
       if (sec.main) parseContent(sec.main, sec.title);
@@ -87,7 +165,7 @@ const Interpretation = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        
+
         {/* 1. Protocol Standard Fields */}
         <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
           <div style={{ padding: '20px 32px', background: 'var(--bg-gray)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -119,40 +197,63 @@ const Interpretation = () => {
         </div>
 
         {/* 2. Schedule of Activities Table */}
-        {soa_table && soa_table.headers && soa_table.headers.length > 0 && Object.keys(soa_table.rows).length > 0 && (
+        {hasSoaTable && (
           <div className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
             <div style={{ padding: '20px 32px', background: 'var(--bg-gray)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                <TableIcon size={20} color="#3182CE" />
                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>Schedule of Activities</h3>
+               <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#3182CE', background: '#EBF8FF', padding: '3px 10px', borderRadius: '8px', fontWeight: 700 }}>
+                 {soa_table.rows.length} procedures × {soa_table.headers.length - 1} visits
+               </span>
             </div>
             <div style={{ padding: '24px 32px', overflowX: 'auto' }}>
               <table style={{ borderCollapse: 'collapse', width: '100%' }}>
                 <thead>
                   <tr>
                     {soa_table.headers.map((h, i) => (
-                      <th key={i} style={{ padding: '12px', background: '#F8FAFC', border: '1px solid var(--border-color)', textAlign: i === 0 ? 'left' : 'center', minWidth: i === 0 ? '200px' : 'auto', fontSize: i === 0 ? '0.85rem' : '0.8rem', whiteSpace: 'nowrap' }}>
-                        {i === 0 ? 'Assessment' : h}
+                      <th key={i} style={{
+                        padding: '10px 12px',
+                        background: i === 0 ? '#F8FAFC' : '#EBF8FF',
+                        border: '1px solid var(--border-color)',
+                        textAlign: i === 0 ? 'left' : 'center',
+                        minWidth: i === 0 ? '200px' : '80px',
+                        fontSize: i === 0 ? '0.85rem' : '0.78rem',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        color: i === 0 ? 'var(--text-main)' : '#2B6CB0',
+                      }}>
+                        {i === 0 ? 'Assessment / Procedure' : h}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(soa_table.rows) ? soa_table.rows.map((rowArr, rIdx) => {
+                  {soa_table.rows.map((rowArr, rIdx) => {
                     const rowName = rowArr[0];
                     const checks = rowArr.slice(1).map(v => v === '1');
                     const hasAnyCheck = checks.some(c => c);
-                    if (!hasAnyCheck && (!rowName || rowName.trim() === '')) return null; // Only show if there's a name or check
+                    if (!hasAnyCheck && (!rowName || rowName.trim() === '')) return null;
                     return (
-                      <tr key={rIdx}>
-                        <td style={{ padding: '12px', border: '1px solid var(--border-color)', fontSize: '0.9rem', fontWeight: 600 }}>{rowName}</td>
+                      <tr key={rIdx} style={{ background: rIdx % 2 === 0 ? 'white' : '#FAFAFA' }}>
+                        <td style={{ padding: '10px 12px', border: '1px solid var(--border-color)', fontSize: '0.88rem', fontWeight: rowName && !hasAnyCheck ? 700 : 500, color: 'var(--text-main)' }}>
+                          {rowName}
+                        </td>
                         {checks.map((isChecked, cIdx) => (
-                          <td key={cIdx} style={{ padding: '12px', border: '1px solid var(--border-color)', textAlign: 'center', fontWeight: 'bold', color: 'var(--text-main)' }}>
-                            {isChecked ? 'X' : ''}
+                          <td key={cIdx} style={{
+                            padding: '10px 12px',
+                            border: '1px solid var(--border-color)',
+                            textAlign: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1rem',
+                            color: isChecked ? '#22C55E' : 'transparent',
+                            background: isChecked ? '#F0FDF4' : 'inherit',
+                          }}>
+                            {isChecked ? '✓' : '—'}
                           </td>
                         ))}
                       </tr>
-                    )
-                  }) : null}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

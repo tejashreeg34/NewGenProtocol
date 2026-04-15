@@ -276,9 +276,18 @@ export const ProtocolProvider = ({ children }) => {
         // Deep clone the target section and its subsections array to avoid mutation
         const targetSection = { ...sections[sectionId] };
         const subs = [...(targetSection.subsections || [])];
-        const newSub = { title, content: '' };
         
         const targetIndex = (index !== null && index !== '') ? parseInt(index) : subs.length;
+        
+        // Inherit depth from the adjacent item to maintain hierarchy
+        let inheritedDepth = 1;
+        if (targetIndex > 0 && targetIndex <= subs.length) {
+            inheritedDepth = subs[targetIndex - 1]?.depth || 1;
+        } else if (subs.length > 0) {
+            inheritedDepth = subs[0]?.depth || 1;
+        }
+
+        const newSub = { title, content: '', depth: inheritedDepth };
         
         subs.splice(targetIndex, 0, newSub);
         targetSection.subsections = subs;

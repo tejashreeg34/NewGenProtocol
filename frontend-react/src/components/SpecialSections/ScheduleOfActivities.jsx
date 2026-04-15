@@ -44,6 +44,10 @@ const ScheduleOfActivities = () => {
     rows: Array.isArray(rawTable.rows) ? rawTable.rows : Object.entries(rawTable.rows || {}).map(([proc, checks]) => [proc, ...checks.map(c => c ? "X" : "")])
   };
 
+  // Whether this table was populated from PDF extraction (has real visit names, not blank
+  const isExtractedFromPDF = table.headers.length > 1 && table.rows.length > 0 &&
+    table.headers.slice(1).some(h => h && h.trim() !== '' && !h.match(/^Visit\s*\d+$/i));
+
   useEffect(() => {
     if (rawTable.rows && !Array.isArray(rawTable.rows)) {
         const newRows = Object.entries(rawTable.rows).map(([proc, checks]) => [proc, ...checks.map(c => c ? "X" : "")]);
@@ -250,6 +254,23 @@ const ScheduleOfActivities = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
             <TableIcon size={18} color="var(--primary-lime)" />
             <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>Schedule of Activities (SoA)</h4>
+            {isExtractedFromPDF && (
+              <span style={{
+                marginLeft: 'auto',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                background: 'var(--light-lime)',
+                color: 'var(--dark-lime)',
+                padding: '4px 12px',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                Extracted from PDF
+              </span>
+            )}
           </div>
 
           {soa.image?.url && (
@@ -294,7 +315,7 @@ const ScheduleOfActivities = () => {
                           textAlign: 'center', 
                           fontSize: '0.9rem', 
                           fontWeight: 700, 
-                          color: 'white',
+                          color: 'var(--text-color)',
                           width: '100%',
                           textTransform: 'uppercase',
                           opacity: 0.9
@@ -320,7 +341,7 @@ const ScheduleOfActivities = () => {
                               textAlign: 'center', 
                               fontSize: '1rem',
                               fontWeight: 700,
-                              color: 'white',
+                              color: 'var(--text-color)',
                               width: '100%',
                               background: 'transparent',
                               border: 'none',

@@ -84,7 +84,7 @@ export default function ImportDocument() {
 
       const response = await axios.post(`${API_BASE_URL}/api/parse-protocol-document`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 60000,
+        timeout: 300000,
       });
 
       setCurrentStep(3);

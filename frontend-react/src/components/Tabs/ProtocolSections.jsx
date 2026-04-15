@@ -4,7 +4,7 @@ import {
   ClipboardList, Plus, Trash2, ChevronRight, ChevronDown,
   Image as ImageIcon, Save, HelpCircle, AlertCircle, 
   List, FileText, Activity, Shield, Users, Settings, BarChart, Info, BookOpen,
-  Bold, ListOrdered, X, UploadCloud, ArrowLeft, AlertTriangle,
+  Bold, ListOrdered, X, UploadCloud, ArrowLeft, ArrowRight, AlertTriangle,
   Target, ListChecks, MapPin, Calendar, Clock, Table as TableIcon
 } from 'lucide-react';
 import { useProtocol } from '../../context/ProtocolContext';
@@ -250,7 +250,7 @@ const CustomTabulation = ({ activeSectionId, activeSubIndex, defaultHeaders = ["
 const ProtocolSections = () => {
   const { 
     data, updateNestedField, addMainSection, deleteSection, addSubsection, deleteSubsection,
-    activeSectionId, setActiveSectionId, activeSubIndex, setActiveSubIndex, openModal 
+    activeSectionId, setActiveSectionId, activeSubIndex, setActiveSubIndex, openModal, setActiveTab
   } = useProtocol();
 
   const [view, setView] = useState('grid');
@@ -285,7 +285,18 @@ const ProtocolSections = () => {
   const sections = data.sections || {};
   const activeSection = sections[activeSectionId];
 
-  const openEditor = (id, subIdx = null) => { setActiveSectionId(id); setActiveSubIndex(subIdx); setView('editor'); };
+  const openEditor = (id, subIdx = null) => {
+    const section = sections[id];
+    const sub = subIdx !== null ? section?.subsections?.[subIdx] : null;
+    const title = (sub ? sub.title : section?.title) || '';
+    if (title.toLowerCase().includes('investigator signature') || title.toLowerCase().includes('signature of investigator')) {
+      setActiveTab('approval');
+      return;
+    }
+    setActiveSectionId(id); 
+    setActiveSubIndex(subIdx); 
+    setView('editor'); 
+  };
   const backToGrid = () => { setView('grid'); setActiveSectionId(null); setActiveSubIndex(null); };
 
   const execCommand = (command, value = null) => {
@@ -392,10 +403,23 @@ const ProtocolSections = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {Object.entries(sections).sort(([a],[b]) => parseInt(a) - parseInt(b)).map(([id, section]) => {
+        {Object.entries(sections)
+          .filter(([id]) => id !== '0' && !isNaN(parseInt(id)))  // Only display properly numbered sections
+          .sort(([a],[b]) => parseInt(a) - parseInt(b))
+          .map(([id, section]) => {
           const Icon = SECTION_ICONS[id] || ClipboardList;
           const isExp = expandedSubs[id];
           const subs = section.subsections || [];
+
+          let tempCounters = [id];
+          const computedNums = subs.map(sub => {
+            let d = sub.depth || 1;
+            while (tempCounters.length <= d) tempCounters.push(0);
+            tempCounters[d] = (tempCounters[d] || 0) + 1;
+            tempCounters.length = d + 1;
+            return tempCounters.join('.');
+          });
+
           return (
             <motion.div key={id} className="card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border-color)', marginBottom: 0 }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: parseInt(id) * 0.03 }}>
@@ -480,14 +504,52 @@ const ProtocolSections = () => {
                           />
                         ) : (
                           <span 
-                            style={{ fontSize: '0.85rem', flex: 1, fontWeight: 500, cursor: 'text' }}
+                            style={{ 
+                              fontSize: sub.depth > 1 ? '0.78rem' : '0.85rem', 
+                              flex: 1, 
+                              fontWeight: sub.depth > 1 ? 400 : 500, 
+                              cursor: 'text',
+                              marginLeft: `${(sub.depth ? sub.depth - 1 : 0) * 24}px`,
+                              color: sub.depth > 1 ? 'var(--text-muted)' : 'var(--text-main)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
                             onClick={e => { e.stopPropagation(); setEditingTitle({ type: 'sub', id, subIdx: idx }); setTempTitle(sub.title); }}
                           >
-                            {id}.{idx+1} {sub.title}
+                            <span style={{ 
+                              background: sub.depth > 1 ? '#F1F5F9' : 'transparent',
+                              padding: sub.depth > 1 ? '2px 6px' : '0',
+                              borderRadius: '4px',
+                              fontWeight: sub.depth > 1 ? 600 : 500
+                            }}>{computedNums[idx]}</span> 
+                            {sub.title}
                           </span>
                         )}
                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{(sub.content||'').replace(/<[^>]*>/g, ' ').split(/\s+/).filter(x=>x).length} words</span>
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                          <button 
+                            className="btn-icon" 
+                            title="Decrease indent (promote)" 
+                            onClick={(e) => { 
+                              e.stopPropagation();
+                              updateNestedField(['sections', id, 'subsections', idx, 'depth'], Math.max(1, (sub.depth || 1) - 1));
+                            }}
+                            disabled={(sub.depth || 1) <= 1}
+                            style={{ opacity: (sub.depth || 1) <= 1 ? 0.3 : 1 }}
+                          >
+                            <ArrowLeft size={14} color="var(--primary-lime)"/>
+                          </button>
+                          <button 
+                            className="btn-icon" 
+                            title="Increase indent (demote)" 
+                            onClick={(e) => { 
+                              e.stopPropagation();
+                              updateNestedField(['sections', id, 'subsections', idx, 'depth'], (sub.depth || 1) + 1);
+                            }}
+                          >
+                            <ArrowRight size={14} color="var(--primary-lime)"/>
+                          </button>
                           <button className="btn-icon" title={`Add subsection near ${sub.title}`} onClick={(e) => { 
                             e.stopPropagation();
                             openModal({
@@ -543,10 +605,28 @@ const ProtocolSections = () => {
   const renderEditor = () => {
     if (!activeSection) return null;
     const isMain = activeSubIndex === null;
-    const title = isMain ? activeSection.title : activeSection.subsections?.[activeSubIndex]?.title;
-    const content = isMain ? activeSection.main : activeSection.subsections?.[activeSubIndex]?.content;
-    const label = isMain ? `Section ${activeSectionId}` : `Subsection ${activeSectionId}.${activeSubIndex + 1}`;
+    const activeSub = activeSection.subsections?.[activeSubIndex];
+    const title = isMain ? activeSection.title : activeSub?.title;
+    const content = isMain ? activeSection.main : activeSub?.content;
     const subs = activeSection.subsections || [];
+
+    // Helper for computing dynamic hierarchy numbering
+    const getSubNumber = (sId, index) => {
+      const sec = sections[sId];
+      if (!sec || !sec.subsections) return '';
+      let counters = [sId];
+      let result = '';
+      for(let i = 0; i <= index; i++) {
+          let d = sec.subsections[i]?.depth || 1;
+          while(counters.length <= d) counters.push(0);
+          counters[d] = (counters[d] || 0) + 1;
+          counters.length = d + 1;
+          result = counters.join('.');
+      }
+      return result;
+    };
+
+    const label = isMain ? `Section ${activeSectionId}` : `Subsection ${getSubNumber(activeSectionId, activeSubIndex)}`;
     const sectionIds = Object.keys(sections).sort((a,b) => parseInt(a) - parseInt(b));
     const currentSectionOrderIndex = sectionIds.indexOf(activeSectionId);
     
@@ -554,7 +634,7 @@ const ProtocolSections = () => {
     let prevNav = null;
     if (activeSubIndex !== null && activeSubIndex > 0) {
       const prevSub = subs[activeSubIndex - 1];
-      prevNav = { type: 'sub', id: activeSectionId, subIdx: activeSubIndex - 1, label: `${activeSectionId}.${activeSubIndex} ${prevSub.title}` };
+      prevNav = { type: 'sub', id: activeSectionId, subIdx: activeSubIndex - 1, label: `${getSubNumber(activeSectionId, activeSubIndex - 1)} ${prevSub.title}` };
     } else if (activeSubIndex === 0) {
       prevNav = { type: 'section', id: activeSectionId, subIdx: null, label: `${activeSection.title} (Main)` };
     } else if (currentSectionOrderIndex > 0) {
@@ -562,8 +642,8 @@ const ProtocolSections = () => {
       const prevSec = sections[prevId];
       const prevSubs = prevSec.subsections || [];
       if (prevSubs.length > 0) {
-        const lastSub = prevSubs[prevSubs.length - 1];
-        prevNav = { type: 'sub', id: prevId, subIdx: prevSubs.length - 1, label: `${prevId}.${prevSubs.length} ${lastSub.title}` };
+        const lastSubIdx = prevSubs.length - 1;
+        prevNav = { type: 'sub', id: prevId, subIdx: lastSubIdx, label: `${getSubNumber(prevId, lastSubIdx)} ${prevSubs[lastSubIdx].title}` };
       } else {
         prevNav = { type: 'section', id: prevId, subIdx: null, label: `${prevId}. ${prevSec.title}` };
       }
@@ -574,10 +654,10 @@ const ProtocolSections = () => {
     // Determine Next Navigation
     let nextNav = null;
     if (activeSubIndex === null && subs.length > 0) {
-      nextNav = { type: 'sub', id: activeSectionId, subIdx: 0, label: `${activeSectionId}.1 ${subs[0].title}` };
+      nextNav = { type: 'sub', id: activeSectionId, subIdx: 0, label: `${getSubNumber(activeSectionId, 0)} ${subs[0].title}` };
     } else if (activeSubIndex !== null && activeSubIndex < subs.length - 1) {
       const nextSub = subs[activeSubIndex + 1];
-      nextNav = { type: 'sub', id: activeSectionId, subIdx: activeSubIndex + 1, label: `${activeSectionId}.${activeSubIndex + 2} ${nextSub.title}` };
+      nextNav = { type: 'sub', id: activeSectionId, subIdx: activeSubIndex + 1, label: `${getSubNumber(activeSectionId, activeSubIndex + 1)} ${nextSub.title}` };
     } else if (currentSectionOrderIndex >= 0 && currentSectionOrderIndex < sectionIds.length - 1) {
       const nextId = sectionIds[currentSectionOrderIndex + 1];
       nextNav = { type: 'section', id: nextId, subIdx: null, label: `${nextId}. ${sections[nextId].title}` };
@@ -654,15 +734,11 @@ const ProtocolSections = () => {
 
         {/* ── Content Area - no inner scroll ── */}
         <div>
-          {title?.includes('Schedule of Activities') ? (
-             <ScheduleOfActivities />
-          ) : (activeSectionId === '1' && activeSubIndex === 0) ? (
+          {(title?.toLowerCase().includes('synopsis') || title?.toLowerCase().includes('protocol summary')) ? (
              <SynopsisStructuredEditor 
                content={content} 
                onChange={(val) => {
-                 const subs = [...activeSection.subsections];
-                 subs[activeSubIndex].content = val;
-                 updateNestedField(['sections', activeSectionId, 'subsections'], subs);
+                 updateContent(val);
                }} 
              />
           ) : (title?.toLowerCase().includes('abbreviation') || (activeSectionId === '10' && activeSubIndex === 14)) ? (
@@ -724,6 +800,13 @@ const ProtocolSections = () => {
                   </span>
                 </div>
               </div>
+
+              {/* Schedule of Activities UI */}
+              {(title?.toLowerCase().includes('schedule of activities') || title?.toLowerCase().includes('time and events') || title?.toLowerCase().includes('trial procedures') || title?.toLowerCase().includes('assessments and procedures') || title?.toLowerCase().includes('schedule of events')) && (
+                <div style={{ marginTop: '24px' }}>
+                  <ScheduleOfActivities />
+                </div>
+              )}
 
               {/* Custom Tabulation for specific subsections */}
               {((activeSectionId === '9' && activeSubIndex === 11) || 
