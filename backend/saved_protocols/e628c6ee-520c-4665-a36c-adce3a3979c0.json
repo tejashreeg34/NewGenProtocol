@@ -1,0 +1,25 @@
+{
+  "id": "e628c6ee-520c-4665-a36c-adce3a3979c0",
+  "created_at": "2025-12-15T15:32:03.112276",
+  "updated_at": "2025-12-15T15:32:03.112276",
+  "data": {
+    "protocol_title": "hinsc",
+    "protocol_number": "PROTO-001",
+    "nct_number": "NCT123",
+    "principal_investigator": "Aarthi",
+    "sponsor": "Deepta",
+    "funded_by": "Teja",
+    "version_number": "v1.0",
+    "protocol_date": "2025-12-15",
+    "sections": {},
+    "synopsis": {},
+    "schema_data": {},
+    "soa_data": {},
+    "objectives_endpoints": [],
+    "abbreviations": [],
+    "amendment_history": [],
+    "appendices": [],
+    "summary_changes": "",
+    "images": []
+  }
+}

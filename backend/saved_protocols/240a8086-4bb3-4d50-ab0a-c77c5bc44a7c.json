@@ -1,0 +1,197 @@
+{
+  "id": "240a8086-4bb3-4d50-ab0a-c77c5bc44a7c",
+  "created_at": "2025-12-16T15:01:46.491709",
+  "updated_at": "2025-12-16T15:01:46.491709",
+  "data": {
+    "protocol_title": "Title",
+    "protocol_number": "Proto-008",
+    "nct_number": "NCT",
+    "principal_investigator": "Teja",
+    "sponsor": "Aarthi",
+    "funded_by": "NIK",
+    "version_number": "V1.0",
+    "protocol_date": "2025-12-16",
+    "sections": {
+      "1": {
+        "main": "",
+        "title": "PROTOCOL SUMMARY",
+        "subsections": {
+          "0": "1.1 Synopsis",
+          "1": "1.2 Schema",
+          "2": "1.3 Schedule of Activities (SoA)"
+        },
+        "notes": ""
+      },
+      "2": {
+        "main": "",
+        "title": "INTRODUCTION",
+        "subsections": {
+          "0": "2.1 Study Rationale",
+          "1": "2.2 Background",
+          "2": "2.3 Risk/Benefit Assessment",
+          "4": "2.3.2 Known Potential Benefits",
+          "5": "Aarthi"
+        },
+        "notes": ""
+      },
+      "3": {
+        "main": "",
+        "title": "OBJECTIVES AND ENDPOINTS",
+        "subsections": {},
+        "notes": ""
+      },
+      "4": {
+        "main": "",
+        "title": "STUDY DESIGN",
+        "subsections": {
+          "0": "4.1 Overall Design",
+          "1": "4.2 Scientific Rationale for Study Design",
+          "2": "4.3 Justification for Dose",
+          "3": "4.4 End of Study Definition"
+        },
+        "notes": ""
+      },
+      "5": {
+        "main": "",
+        "title": "STUDY POPULATION",
+        "subsections": {
+          "0": "5.1 Inclusion Criteria",
+          "1": "5.2 Exclusion Criteria",
+          "2": "5.3 Lifestyle Considerations",
+          "3": "5.4 Screen Failures",
+          "4": "5.5 Strategies for Recruitment and Retention"
+        },
+        "notes": ""
+      },
+      "6": {
+        "main": "",
+        "title": "STUDY INTERVENTION",
+        "subsections": {
+          "0": "6.1 Study Intervention(s) Administration",
+          "1": "6.1.1 Study Intervention Description",
+          "2": "6.1.2 Dosing and Administration",
+          "3": "6.2 Preparation/Handling/Storage/Accountability",
+          "4": "6.2.1 Acquisition and accountability",
+          "5": "6.2.2 Formulation, Appearance, Packaging, and Labeling",
+          "6": "6.2.3 Product Storage and Stability",
+          "7": "6.2.4 Preparation",
+          "8": "6.3 Measures to Minimize Bias: Randomization and Blinding",
+          "9": "6.4 Study Intervention Compliance",
+          "10": "6.5 Concomitant Therapy",
+          "11": "6.5.1 Rescue Medicine"
+        },
+        "notes": ""
+      },
+      "7": {
+        "main": "",
+        "title": "STUDY INTERVENTION DISCONTINUATION AND PARTICIPANT DISCONTINUATION/WITHDRAWAL",
+        "subsections": {
+          "0": "7.1 Discontinuation of Study Intervention",
+          "1": "7.2 Participant Discontinuation/Withdrawal from the Study",
+          "2": "7.3 Lost to Follow-Up"
+        },
+        "notes": ""
+      },
+      "8": {
+        "main": "",
+        "title": "STUDY ASSESSMENTS AND PROCEDURES",
+        "subsections": {
+          "0": "8.1 Efficacy Assessments",
+          "1": "8.2 Safety and Other Assessments",
+          "2": "8.3 Adverse Events and Serious Adverse Events",
+          "3": "8.3.1 Definition of Adverse Events (AE)",
+          "4": "8.3.2 Definition of Serious Adverse Events (SAE)",
+          "5": "8.3.3 Classification of an Adverse Event",
+          "6": "8.3.4 Time Period and Frequency for Event Assessment and Follow-Up",
+          "7": "8.3.5 Adverse Event Reporting",
+          "8": "8.3.6 Serious Adverse Event Reporting",
+          "9": "8.3.7 Reporting Events to Participants",
+          "10": "8.3.8 Events of Special Interest",
+          "11": "8.3.9 Reporting of Pregnancy",
+          "12": "8.4 Unanticipated Problems",
+          "13": "8.4.1 Definition of Unanticipated Problems (UP)",
+          "14": "8.4.2 Unanticipated Problem Reporting",
+          "15": "8.4.3 Reporting Unanticipated Problems to Participants"
+        },
+        "notes": ""
+      },
+      "9": {
+        "main": "",
+        "title": "STATISTICAL CONSIDERATIONS",
+        "subsections": {
+          "0": "9.1 Statistical Hypotheses",
+          "1": "9.2 Sample Size Determination",
+          "2": "9.3 Populations for Analyses",
+          "3": "9.4 Statistical Analyses",
+          "4": "9.4.1 General Approach",
+          "5": "9.4.2 Analysis of the Primary Efficacy Endpoint(s)",
+          "6": "9.4.3 Analysis of the Secondary Endpoint(s)",
+          "7": "9.4.4 Safety Analyses",
+          "8": "9.4.5 Baseline Descriptive Statistics",
+          "9": "9.4.6 Planned Interim Analyses",
+          "10": "9.4.7 Sub-Group Analyses",
+          "11": "9.4.8 Tabulation of Individual participant Data",
+          "12": "9.4.9 Exploratory Analyses"
+        },
+        "notes": ""
+      },
+      "10": {
+        "main": "",
+        "title": "SUPPORTING DOCUMENTATION AND OPERATIONAL CONSIDERATIONS",
+        "subsections": {
+          "0": "10.1 Regulatory, Ethical, and Study Oversight Considerations",
+          "1": "10.1.1 Informed Consent Process",
+          "2": "10.1.2 Study Discontinuation and Closure",
+          "3": "10.1.3 Confidentiality and Privacy",
+          "4": "10.1.4 Future Use of Stored Specimens and Data",
+          "5": "10.1.5 Key Roles and Study Governance",
+          "6": "10.1.6 Safety Oversight",
+          "7": "10.1.7 Clinical Monitoring",
+          "8": "10.1.8 Quality Assurance and Quality Control",
+          "9": "10.1.9 Data Handling and Record Keeping",
+          "10": "10.1.10 Protocol Deviations",
+          "11": "10.1.11 Publication and Data Sharing Policy",
+          "12": "10.1.12 Conflict of Interest Policy",
+          "13": "10.2 Additional Considerations",
+          "14": "10.3 Abbreviations",
+          "15": "10.4 Protocol Amendment History"
+        },
+        "notes": ""
+      },
+      "11": {
+        "main": "",
+        "title": "REFERENCES",
+        "subsections": {},
+        "notes": ""
+      },
+      "12": {
+        "main": "",
+        "title": "Hello",
+        "subsections": {},
+        "notes": ""
+      }
+    },
+    "synopsis": {
+      "Title": "iojapija",
+      "Study Description": "sdhoihs",
+      "Objectives": "iowhsd",
+      "Endpoints": "dcusd",
+      "Study Population": "asugsd",
+      "Phase": "adjds",
+      "Sites/Facilities": "sdkjc",
+      "Study Intervention Description": "akfdhf",
+      "Study Duration": "wdjsdsduf",
+      "Participant Duration": "sdif"
+    },
+    "schema_data": {
+      "image_url": "/uploads/b3eea272-10a8-49a6-a9e9-8b45aca7edeb.jpg"
+    },
+    "soa_data": {},
+    "objectives_endpoints": [],
+    "abbreviations": [],
+    "amendment_history": [],
+    "appendices": [],
+    "summary_changes": "",
+    "images": []
+  }
+}

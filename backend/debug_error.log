@@ -1,0 +1,28 @@
+
+=== RENDER PREVIEW ERROR ===
+Traceback (most recent call last):
+  File "C:\Users\2000171734\Downloads\PGT_Aarthi_new\NewGenProtocol\backend\main.py", line 1036, in render_preview
+    raw_lines = re.sub(r'<br\s*/?>', '\n', sec0['main']).split('\n')
+                ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+=== RENDER PREVIEW ERROR ===
+Traceback (most recent call last):
+  File "C:\Users\2000171734\Downloads\PGT_Aarthi_new\NewGenProtocol\backend\main.py", line 1036, in render_preview
+    raw_lines = re.sub(r'<br\s*/?>', '\n', sec0['main']).split('\n')
+                ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+=== RENDER PREVIEW ERROR ===
+Traceback (most recent call last):
+  File "C:\Users\2000171734\Downloads\PGT_Aarthi_new\NewGenProtocol\backend\main.py", line 1036, in render_preview
+    raw_lines = re.sub(r'<br\s*/?>', '\n', sec0['main']).split('\n')
+                ^^
+NameError: name 're' is not defined. Did you forget to import 're'
+
+=== RENDER PREVIEW ERROR ===
+Traceback (most recent call last):
+  File "C:\Users\2000171734\Downloads\PGT_Aarthi_new\NewGenProtocol\backend\main.py", line 1036, in render_preview
+    raw_lines = re.sub(r'<br\s*/?>', '\n', sec0['main']).split('\n')
+                ^^
+NameError: name 're' is not defined. Did you forget to import 're'

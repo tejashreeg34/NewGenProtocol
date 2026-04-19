@@ -1,0 +1,25 @@
+{
+  "id": "65233f58-3243-4820-9d6d-d96eca0767fb",
+  "created_at": "2025-12-16T11:47:37.285147",
+  "updated_at": "2025-12-16T11:47:37.285147",
+  "data": {
+    "protocol_title": "Protocol ",
+    "protocol_number": "001",
+    "nct_number": "123",
+    "principal_investigator": "Name",
+    "sponsor": "Name",
+    "funded_by": "NIH",
+    "version_number": "v1.0",
+    "protocol_date": "2025-12-16",
+    "sections": {},
+    "synopsis": {},
+    "schema_data": {},
+    "soa_data": {},
+    "objectives_endpoints": [],
+    "abbreviations": [],
+    "amendment_history": [],
+    "appendices": [],
+    "summary_changes": "",
+    "images": []
+  }
+}

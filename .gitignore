@@ -1,0 +1,9 @@
+backend/.env
+__pycache__/
+*.pyc
+backend/generated_docs/
+Prot_1.pdf
+*.docx
+*.pdf
+!Prot_1.docx # Keep template if needed, but the user seems to be generating these
+
