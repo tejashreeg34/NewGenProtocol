@@ -9,13 +9,14 @@ import json
 import uuid
 import io
 import logging
+import re
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from word_generator import generate_complete_word_document
-from document_generator import generate_interpreted_word_report
+from document_generator import generate_complete_word_document, generate_interpreted_word_report
 from pdf_generator import generate_pdf_document, generate_interpreted_pdf_report
 from qc_engine import qc_engine
 from database import init_db, execute_query
@@ -463,6 +464,10 @@ async def generate_word(data: ProtocolData):
             }
         )
     except Exception as e:
+        import traceback
+        with open('debug_error.log', 'a') as f:
+            f.write("\n=== GENERATE WORD ERROR ===\n")
+            traceback.print_exc(file=f)
         logger.error(f"Failed to generate Word document: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate Word document: {str(e)}")
 
@@ -555,10 +560,15 @@ async def parse_protocol_document(file: UploadFile = File(...)):
             len(parsed_data.get('sections', {})),
         ])
 
-        soa_rows = len(parsed_data.get('soa_data', {}).get('table', {}).get('rows', []))
+        soa_table = parsed_data.get('soa_data', {}).get('table', {})
+        soa_raw_rows = soa_table.get('rows', [])
+        soa_rows = len(soa_raw_rows) if isinstance(soa_raw_rows, (list, dict)) else 0
+        soa_hdrs = len(soa_table.get('headers', []))
         has_soa_image = bool(parsed_data.get('soa_data', {}).get('image'))
 
-        logger.info(f"Parsed '{filename}': {extracted_count} fields, {soa_rows} SoA rows, image={has_soa_image}")
+        logger.info(f"Parsed '{filename}': {extracted_count} fields extracted")
+        logger.info(f"  -> SoA: {soa_rows} rows x {soa_hdrs} visit columns, image={has_soa_image}")
+        logger.info(f"  -> Sections: {len(parsed_data.get('sections', {}))} | Synopsis objectives: {len((parsed_data.get('synopsis_data') or {}).get('objectives', {}).get('primary', []))} primary")
 
         return {
             "status": "success",
@@ -901,6 +911,381 @@ async def re_extract_interpretation(protocol_id: int):
     except Exception as e:
         logger.exception("Error re-extracting interpretation")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/render-preview")
+async def render_preview(request: Request):
+    """
+    Converts the full ProtocolData object into a richly styled HTML string
+    for the live Document Preview tab. Self-contained, no file I/O.
+    """
+    try:
+        body = await request.json()
+        pd_data = body  # protocol data dict
+        
+        # If no real data has been extracted yet, show an empty state.
+        # This prevents the preview from showing blank section headers when the user just opened the app.
+        if not pd_data.get('protocol_title') and not pd_data.get('sections'):
+            return JSONResponse(content={"html": "<div style='display:flex; justify-content:center; align-items:center; height:100%; color:#9ca3af; font-size:12pt; font-style:italic; font-family:Calibri;'>No document imported yet. Please import and generate a protocol first.</div>"})
+
+        def e(text):
+            if not text:
+                return ""
+            return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        def rhs(html_text):
+            """Pass through already-formatted HTML from parser."""
+            return str(html_text or '')
+
+        parts = []
+
+        # ── CSS ──────────────────────────────────────────────────────────────
+        parts.append("""
+        <style>
+          * { box-sizing: border-box; }
+          body { font-family: 'Calibri', 'Segoe UI', sans-serif; font-size: 11pt; color: #1a1a1a; line-height: 1.6; margin: 0; padding: 0; }
+          h1.sec { font-size: 14pt; font-weight: 700; color: #0d1f3c; border-bottom: 2.5px solid #22c55e; padding-bottom: 6px; margin-top: 36px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+          h2.sub { font-size: 12pt; font-weight: 700; color: #1a3a5c; margin-top: 22px; margin-bottom: 8px; }
+          h3.subsub { font-size: 11pt; font-weight: 600; color: #2c5282; margin-top: 14px; margin-bottom: 6px; }
+          p { margin: 6px 0 8px 0; text-align: justify; }
+          ul { margin: 4px 0 8px 28px; padding: 0; }
+          li { margin-bottom: 4px; }
+
+          /* ── Title block ── */
+          .title-block { text-align: center; margin-bottom: 36px; padding: 28px 32px; background: transparent; border: none; }
+          .title-block h1 { font-size: 15pt; font-weight: 900; color: #0d1f3c; margin: 0 0 12px 0; line-height: 1.3; }
+          .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; max-width: 600px; margin: 0 auto; text-align: left; font-size: 9.5pt; }
+          .meta-item b { color: #166534; }
+
+          /* ── Compliance callout ── */
+          .compliance { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; font-size: 10pt; border-radius: 0 6px 6px 0; }
+
+          /* ── Page break ── */
+          .page-break { margin: 36px 0; border: none; border-top: 2px dashed #e5e7eb; }
+
+          /* ── TOC table ── */
+          .toc-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+          .toc-table tr:hover { background: #f9fafb; }
+          .toc-num  { width: 60px; font-weight: 700; color: #0d1f3c; padding: 4px 8px 4px 0; vertical-align: top; white-space: nowrap; }
+          .toc-title { padding: 4px 8px; color: #1a1a1a; vertical-align: top; }
+          .toc-dots  { border-bottom: 1px dotted #9ca3af; flex: 1; min-width: 20px; }
+          .toc-page  { width: 40px; text-align: right; color: #6b7280; font-weight: 600; padding: 4px 0 4px 8px; white-space: nowrap; vertical-align: top; }
+          .toc-l0 .toc-title { font-weight: 700; color: #0d1f3c; }
+          .toc-l1 .toc-num, .toc-l1 .toc-title { padding-left: 20px; color: #374151; font-size: 9.5pt; }
+          .toc-l2 .toc-num, .toc-l2 .toc-title { padding-left: 40px; color: #6b7280; font-size: 9pt; }
+
+          /* ── SoA table (clinical format) ── */
+          .soa-container { overflow-x: auto; margin: 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; }
+          .soa-table { border-collapse: collapse; font-size: 8pt; min-width: 100%; }
+          .soa-table thead tr { background: #0d1f3c; }
+          .soa-table thead th { color: white; padding: 7px 6px; text-align: center; font-weight: 700; border: 1px solid #1e3a5f; white-space: nowrap; font-size: 7.5pt; }
+          .soa-table thead th.proc-hdr { text-align: left; min-width: 180px; font-size: 8pt; background: #0a172e; }
+          .soa-table tbody tr:nth-child(even) { background: #f8fafc; }
+          .soa-table tbody tr:hover { background: #f0fdf4; }
+          .soa-table td { border: 1px solid #e2e8f0; padding: 5px 6px; text-align: center; vertical-align: middle; }
+          .soa-table td.proc-cell { text-align: left; font-weight: 600; color: #1e293b; background: #f8fafc; min-width: 180px; padding-left: 10px; }
+          .soa-table td.proc-cell.category { background: #e8f4fd; font-weight: 700; color: #0d1f3c; font-size: 8.5pt; }
+          .chk { color: #16a34a; font-size: 12pt; font-weight: 900; line-height: 1; }
+
+          /* ── Content tables (Objectives / Abbreviations) ── */
+          .content-table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }
+          .content-table th { background: #1e3a5f; color: white; padding: 8px 10px; text-align: left; font-weight: 700; }
+          .content-table td { border: 1px solid #d1d5db; padding: 6px 10px; vertical-align: top; }
+          .content-table tr:nth-child(even) td { background: #f9fafb; }
+        </style>
+        """)
+
+        # ── TITLE PAGE ───────────────────────────────────────────────────────
+        parts.append(f"""
+        <div class="title-block">
+          <h1>{e(pd_data.get('protocol_title') or 'Clinical Trial Protocol')}</h1>
+          <div class="meta-grid">
+            <div class="meta-item"><b>Protocol No:</b> {e(pd_data.get('protocol_number',''))}</div>
+            <div class="meta-item"><b>NCT No:</b> {e(pd_data.get('nct_number',''))}</div>
+            <div class="meta-item"><b>Principal Investigator:</b> {e(pd_data.get('principal_investigator',''))}</div>
+            <div class="meta-item"><b>Sponsor:</b> {e(pd_data.get('sponsor',''))}</div>
+            <div class="meta-item"><b>Funded By:</b> {e(pd_data.get('funded_by',''))}</div>
+            <div class="meta-item"><b>Version:</b> {e(pd_data.get('version_number',''))} &nbsp;|&nbsp; <b>Date:</b> {e(pd_data.get('protocol_date',''))}</div>
+          </div>
+        </div>
+        """)
+
+        # ── TABLE OF CONTENTS ─────────────────────────────────────────────────
+        sections = pd_data.get('sections') or {}
+        sec0 = sections.get('0') or {}
+        toc_tree = sec0.get('toc_tree') or []
+
+        parts.append('<hr class="page-break" />')
+        parts.append('<h1 class="sec">Table of Contents</h1>')
+
+        if toc_tree:
+            # Render LLM-parsed TOC tree as a proper dot-leader table
+            parts.append('<table class="toc-table">')
+
+            def render_toc_node(node, depth=0):
+                num   = e(node.get('number') or '')
+                title = e(node.get('title') or '')
+                page  = node.get('page')
+                level_cls = f'toc-l{min(depth, 2)}'
+                pad_left = depth * 20
+                parts.append(f'<tr class="{level_cls}">'
+                              f'<td class="toc-num" style="padding-left:{pad_left}px">{num}</td>'
+                              f'<td class="toc-title">{title}</td>'
+                              f'<td class="toc-page">{page if page else ""}</td>'
+                              f'</tr>')
+                for child in (node.get('children') or []):
+                    render_toc_node(child, depth + 1)
+
+            for node in toc_tree:
+                render_toc_node(node, 0)
+            parts.append('</table>')
+
+        elif sec0.get('main'):
+            # Fallback: render the raw TOC text as a table, splitting on <br/>
+            raw_lines = re.sub(r'<br\s*/?>', '\n', sec0['main']).split('\n')
+            parts.append('<table class="toc-table">')
+            for line in raw_lines:
+                clean = re.sub(r'<[^>]+>', '', line).strip()
+                if not clean:
+                    continue
+                # Detect "1.2 Background ........ 8" style
+                dot_m = re.match(r'^(\d[\d.]*)\s+(.+?)\s*[.\-–]{2,}\s*(\d+)\s*$', clean)
+                num_only = re.match(r'^(\d[\d.]*)$', clean)
+                if dot_m:
+                    num, title, page = e(dot_m.group(1)), e(dot_m.group(2)), dot_m.group(3)
+                    depth = len(dot_m.group(1).split('.')) - 1
+                    pad = depth * 20
+                    level_cls = f'toc-l{min(depth, 2)}'
+                    parts.append(f'<tr class="{level_cls}"><td class="toc-num" style="padding-left:{pad}px">{num}</td><td class="toc-title">{title}</td><td class="toc-page">{page}</td></tr>')
+                elif not num_only:
+                    # Plain title line (section heading in TOC)
+                    depth = 0
+                    nm = re.match(r'^(\d[\d.]*)\s+(.+)$', clean)
+                    if nm:
+                        depth = len(nm.group(1).split('.')) - 1
+                        num = e(nm.group(1))
+                        title = e(nm.group(2))
+                    else:
+                        num = ''
+                        title = e(clean)
+                    pad = depth * 20
+                    level_cls = f'toc-l{min(depth, 2)}'
+                    parts.append(f'<tr class="{level_cls}"><td class="toc-num" style="padding-left:{pad}px">{num}</td><td class="toc-title">{title}</td><td class="toc-page"></td></tr>')
+            parts.append('</table>')
+
+        # ── STATEMENT OF COMPLIANCE ──────────────────────────────────────────
+        parts.append('<hr class="page-break" />')
+        parts.append('<h1 class="sec">Statement of Compliance</h1>')
+        parts.append("""<div class="compliance">
+          The trial will be carried out in accordance with International Conference on Harmonisation
+          Good Clinical Practice (ICH GCP) and applicable US Code of Federal Regulations (CFR)
+          including 45 CFR Part 46, 21 CFR Part 50, 21 CFR Part 56, 21 CFR Part 312, and/or
+          21 CFR Part 812. Approval of both the protocol and the consent form must be obtained
+          before any participant is enrolled.
+        </div>""")
+
+        # ── SECTION 1: PROTOCOL SUMMARY ─────────────────────────────────────
+        parts.append('<hr class="page-break" />')
+        parts.append('<h1 class="sec">1 Protocol Summary</h1>')
+
+        s_data = pd_data.get('synopsis_data') or {}
+        ov = s_data.get('overview') or {}
+
+        parts.append('<h2 class="sub">1.1 Synopsis</h2>')
+        synop_fields = [
+            ('Title', rhs(ov.get('title',''))),
+            ('Coordinating Investigator', e(ov.get('coordinating_investigator',''))),
+            ('Clinical Phase', e(ov.get('clinical_phase',''))),
+            ('Trial Sites', e(ov.get('trial_sites',''))),
+            ('Planned Duration', e(ov.get('planned_period',''))),
+            ('Number of Patients', e(s_data.get('num_patients',''))),
+        ]
+        parts.append('<table class="content-table" style="font-size:10pt"><tbody>')
+        for label, val in synop_fields:
+            if val:
+                parts.append(f'<tr><td style="width:200px;font-weight:700;background:#f0fdf4">{label}</td><td>{val}</td></tr>')
+        parts.append('</tbody></table>')
+
+        # Objectives
+        obj = s_data.get('objectives') or {}
+        if obj.get('primary') or obj.get('secondary') or obj.get('exploratory'):
+            parts.append('<h3 class="subsub">Objectives</h3>')
+            for label, key in [('Primary', 'primary'), ('Secondary', 'secondary'), ('Exploratory', 'exploratory')]:
+                items = obj.get(key) or []
+                if items:
+                    parts.append(f'<p><b>{label}:</b></p><ul>')
+                    for it in items:
+                        parts.append(f'<li>{rhs(it)}</li>')
+                    parts.append('</ul>')
+
+        # Endpoints
+        end = s_data.get('endpoints') or {}
+        if end.get('primary') or end.get('secondary'):
+            parts.append('<h3 class="subsub">Endpoints</h3>')
+            for label, key in [('Primary', 'primary'), ('Secondary', 'secondary'), ('Exploratory', 'exploratory')]:
+                items = end.get(key) or []
+                if items:
+                    parts.append(f'<p><b>{label}:</b></p><ul>')
+                    for it in items:
+                        parts.append(f'<li>{rhs(it)}</li>')
+                    parts.append('</ul>')
+
+        # Inclusion / Exclusion
+        incl = (s_data.get('inclusion') or {}).get('points') or []
+        excl = (s_data.get('exclusion') or {}).get('points') or []
+        if incl:
+            parts.append('<h3 class="subsub">Inclusion Criteria</h3><ul>')
+            for pt in incl:
+                parts.append(f'<li>{rhs(pt)}</li>')
+            parts.append('</ul>')
+        if excl:
+            parts.append('<h3 class="subsub">Exclusion Criteria</h3><ul>')
+            for pt in excl:
+                parts.append(f'<li>{rhs(pt)}</li>')
+            parts.append('</ul>')
+
+        # ── 1.3 Schedule of Activities (SoA) ──────────────────────────────
+        soa = pd_data.get('soa_data') or {}
+        soa_tbl = soa.get('table') or {}
+        soa_hdrs = soa_tbl.get('headers') or []
+        soa_rows = soa_tbl.get('rows') or []
+
+        # Determine if col 0 of headers is already "Procedure" (list rows) or separate
+        if soa_hdrs and soa_rows:
+            parts.append('<h2 class="sub">1.3 Schedule of Activities (SoA)</h2>')
+            parts.append('<div class="soa-container"><table class="soa-table"><thead><tr>')
+
+            if isinstance(soa_rows, dict):
+                # Dict format: headers = visit columns, rows keys = procedures
+                parts.append('<th class="proc-hdr">Procedure / Assessment</th>')
+                for h in soa_hdrs:
+                    parts.append(f'<th>{e(h)}</th>')
+                parts.append('</tr></thead><tbody>')
+                for proc, checks in soa_rows.items():
+                    parts.append(f'<tr><td class="proc-cell">{e(proc)}</td>')
+                    for c in checks:
+                        cv = str(c).strip().lower()
+                        mark = '<span class="chk">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
+                        parts.append(f'<td>{mark}</td>')
+                    parts.append('</tr>')
+
+            elif isinstance(soa_rows, list):
+                # List format: headers[0] is "Procedure", rest are visits
+                first_hdr = (soa_hdrs[0] if soa_hdrs else '').lower()
+                if first_hdr in ('procedure', 'procedures', 'assessment', 'assessments', 'parameter'):
+                    # Header row 0 = label column
+                    parts.append(f'<th class="proc-hdr">{e(soa_hdrs[0])}</th>')
+                    for h in soa_hdrs[1:]:
+                        parts.append(f'<th>{e(h)}</th>')
+                    parts.append('</tr></thead><tbody>')
+                    for row in soa_rows:
+                        if not row:
+                            continue
+                        proc = row[0]
+                        # Detect category rows (empty or all-zero checks = category header)
+                        rest = row[1:]
+                        is_cat = all(str(c).strip().lower() in ('0', '', 'false') for c in rest)
+                        cell_cls = 'proc-cell category' if is_cat else 'proc-cell'
+                        parts.append(f'<tr><td class="{cell_cls}">{e(proc)}</td>')
+                        for c in rest:
+                            cv = str(c).strip().lower()
+                            mark = '<span class="check">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
+                            parts.append(f'<td>{mark}</td>')
+                        parts.append('</tr>')
+                else:
+                    # Headers don't include the procedure column — prepend it
+                    parts.append('<th class="proc-hdr">Procedure / Assessment</th>')
+                    for h in soa_hdrs:
+                        parts.append(f'<th>{e(h)}</th>')
+                    parts.append('</tr></thead><tbody>')
+                    for row in soa_rows:
+                        if not row:
+                            continue
+                        proc = row[0] if row else ''
+                        parts.append(f'<tr><td class="proc-cell">{e(proc)}</td>')
+                        for c in row[1:]:
+                            cv = str(c).strip().lower()
+                            mark = '<span class="check">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
+                            parts.append(f'<td>{mark}</td>')
+                        parts.append('</tr>')
+
+            parts.append('</tbody></table></div>')
+
+        # ── ALL SECTIONS (from parsed document) ──────────────────────────────
+        SECTION_TITLES = {
+            "2": "Introduction", "3": "Objectives and Endpoints",
+            "4": "Study Design", "5": "Study Population",
+            "6": "Study Intervention", "7": "Study Intervention Discontinuation",
+            "8": "Study Assessments and Procedures", "9": "Statistical Considerations",
+            "10": "Supporting Documentation", "11": "References"
+        }
+
+        for sec_key in sorted(sections.keys(), key=lambda x: int(x) if x.lstrip('-').isdigit() else 999):
+            if sec_key == '0':
+                continue  # TOC already rendered
+            sec = sections[sec_key] or {}
+            sec_title = sec.get('title') or SECTION_TITLES.get(sec_key, f'Section {sec_key}')
+            parts.append('<hr class="page-break" />')
+            parts.append(f'<h1 class="sec">{e(sec_key)} {e(sec_title)}</h1>')
+
+            if sec.get('main'):
+                parts.append(f'<div>{rhs(sec["main"])}</div>')
+
+            subs = sec.get('subsections') or []
+            if isinstance(subs, list):
+                for i, sub in enumerate(subs):
+                    if isinstance(sub, dict):
+                        title = sub.get('title') or sub.get('number') or ''
+                        content = sub.get('content') or ''
+                        depth = sub.get('depth', 1)
+                        num = sub.get('number', '')
+                        heading_num = f"{num}" if num else f"{sec_key}.{i+1}"
+                        if depth <= 1:
+                            parts.append(f'<h2 class="sub">{e(heading_num)} {e(title)}</h2>')
+                        else:
+                            parts.append(f'<h3 class="subsub">{e(heading_num)} {e(title)}</h3>')
+                        if content:
+                            parts.append(f'<div>{rhs(content)}</div>')
+                    elif isinstance(sub, str) and sub.strip():
+                        parts.append(f'<h2 class="sub">{sec_key}.{i+1} {e(sub)}</h2>')
+            
+            elif isinstance(subs, dict):
+                for idx, content in sorted(subs.items(), key=lambda x: int(x[0]) if x[0].isdigit() else 999):
+                    if content:
+                        parts.append(f'<h2 class="sub">{sec_key}.{int(idx)+1 if idx.isdigit() else idx} Subsection</h2>')
+                        parts.append(f'<div>{rhs(str(content))}</div>')
+
+        # ── ABBREVIATIONS ────────────────────────────────────────────────────
+        abbrs = pd_data.get('abbreviations') or []
+        if abbrs:
+            parts.append('<hr class="page-break" />')
+            parts.append('<h2 class="sub">Abbreviations</h2>')
+            parts.append('<table class="content-table"><thead><tr><th style="width:160px">Abbreviation</th><th>Full Form</th></tr></thead><tbody>')
+            for ab in abbrs:
+                parts.append(f'<tr><td><b>{e(ab.get("Abbreviation",""))}</b></td><td>{e(ab.get("Full Form",""))}</td></tr>')
+            parts.append('</tbody></table>')
+
+        # ── AMENDMENT HISTORY ────────────────────────────────────────────────
+        amends = pd_data.get('amendment_history') or []
+        if amends:
+            parts.append('<h2 class="sub">Protocol Amendment History</h2>')
+            parts.append('<table class="content-table"><thead><tr><th>Version</th><th>Date</th><th>Description</th><th>Rationale</th></tr></thead><tbody>')
+            for am in amends:
+                parts.append(f'<tr><td>{e(am.get("Version",""))}</td><td>{e(am.get("Date",""))}</td><td>{e(am.get("Description",""))}</td><td>{e(am.get("Rationale",""))}</td></tr>')
+            parts.append('</tbody></table>')
+
+
+
+        return JSONResponse(content={"html": "\n".join(parts)})
+
+
+    except Exception as ex:
+        import traceback
+        with open('debug_error.log', 'a') as f:
+            f.write("\n=== RENDER PREVIEW ERROR ===\n")
+            traceback.print_exc(file=f)
+        logger.exception("Error in render_preview")
+        raise HTTPException(status_code=500, detail=f"Preview render failed: {str(ex)}")
 
 
 if __name__ == "__main__":

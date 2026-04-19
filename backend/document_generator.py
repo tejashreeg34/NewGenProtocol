@@ -9,6 +9,11 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
 from datetime import datetime
 import re
 
+def strip_html_tags(text):
+    if not isinstance(text, str):
+        return str(text) if text is not None else ''
+    return re.sub(r'<[^>]+>', '', text).strip()
+
 def add_html_to_paragraph(paragraph, html_text):
     """
     Parses a simple HTML string and adds formatted runs to the paragraph.
@@ -716,12 +721,21 @@ def create_soa_table(doc, soa_data):
         for i, header in enumerate(headers):
             if i < len(hdr_cells):
                  hdr_cells[i].text = str(header)
+                 hdr_cells[i].paragraphs[0].style = 'TableText'
+                 hdr_cells[i].paragraphs[0].runs[0].bold = True
         
         for row in rows:
             cells = table.add_row().cells
             for i, val in enumerate(row):
                 if i < len(cells):
-                    cells[i].text = str(val)
+                    val_str = str(val).strip()
+                    if i > 0:
+                        if val_str.lower() in ['1', 'true', 'yes', 'y']:
+                            val_str = 'X'
+                        elif val_str.lower() in ['0', 'false', 'no', 'n', '']:
+                            val_str = ''
+                    cells[i].text = val_str
+                    cells[i].paragraphs[0].style = 'TableText'
 
     for row in table.rows:
         for cell in row.cells:

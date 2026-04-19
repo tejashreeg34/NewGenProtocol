@@ -758,14 +758,14 @@ class DocumentParser:
         soa = {"headers": [], "rows": []}
         if table_text.strip():
             soa = self._groq_call(client, SOA_SYSTEM, SOA_PROMPT.format(tables=table_text),
-                                  max_tokens=1500, label="SoA")
+                                  max_tokens=3000, label="SoA")
 
         # ── Call 4: TOC (LLM agent — array response, not json_object mode) ──
         toc_tree = []
         if raw_toc_text.strip():
             toc_tree = self._groq_toc_call(client, raw_toc_text)
 
-        return self._assemble(meta, syn, soa, sections, soa_image_url, full_text, toc_tree)
+        return self._assemble(meta, syn, soa, sections, soa_image_url, full_text, toc_tree, tables_data=tables_data)
 
     def _groq_call(self, client, system: str, user: str, max_tokens: int, label: str) -> dict:
         """Single Groq call with JSON mode. Returns parsed dict."""
@@ -1037,7 +1037,8 @@ class DocumentParser:
     # ──────────────────────────────────────────────
     # ASSEMBLE FINAL RESULT
     # ──────────────────────────────────────────────
-    def _assemble(self, meta, syn, soa, sections, soa_image_url, full_text, toc_tree: list = None) -> dict:
+    def _assemble(self, meta, syn, soa, sections, soa_image_url, full_text, toc_tree: list = None, tables_data: list = None) -> dict:
+        self._last_tables_data = tables_data or []
         result = self._empty_protocol()
 
         s   = lambda d, k: str(d.get(k) or '').strip()
@@ -1175,6 +1176,9 @@ class DocumentParser:
 
         if isinstance(g_hdrs, list) and g_hdrs and isinstance(g_rows, list) and g_rows:
             clean_hdrs = [str(h).strip() for h in g_hdrs if str(h).strip()]
+            if clean_hdrs and clean_hdrs[0].lower() not in ['procedure', 'procedures', 'assessment', 'assessments']:
+                clean_hdrs.insert(0, 'Procedure')
+                
             clean_rows = []
             for row in g_rows:
                 if not isinstance(row, list) or not row:
@@ -1192,9 +1196,9 @@ class DocumentParser:
                 result['soa_data']['table']['headers'] = clean_hdrs
                 result['soa_data']['table']['rows']    = clean_rows
         else:
-            # Regex SoA fallback
+            # Regex SoA fallback — use the raw tables_data from pdfplumber
             result['soa_data'] = self._regex_soa(
-                self._all_tables_as_data(full_text), soa_image_url
+                self._last_tables_data or self._all_tables_as_data(full_text), soa_image_url
             )
 
         # Attach image if table empty
@@ -1488,8 +1492,8 @@ class DocumentParser:
         return {'table': {'headers': [], 'rows': []}, 'image': None}
 
     def _all_tables_as_data(self, full_text):
-        """Placeholder — returns empty when called from assemble without real tables."""
-        return []
+        """Return stored tables from last parse run (populated by _assemble)."""
+        return getattr(self, '_last_tables_data', [])
 
     # ──────────────────────────────────────────────
     # SMALL HELPERS
