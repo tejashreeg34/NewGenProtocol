@@ -121,7 +121,6 @@ const Preview = () => {
                 style={{ 
                   width: '100%', 
                   maxWidth: `${800 * (zoom / 100)}px`, 
-                  minHeight: `${1100 * (zoom / 100)}px`, 
                   background: 'white', 
                   boxShadow: '0 20px 50px rgba(0,0,0,0.15)', 
                   padding: `${80 * (zoom / 100)}px`,
@@ -143,19 +142,8 @@ const Preview = () => {
                      dangerouslySetInnerHTML={{ __html: html }} 
                    />
                  )}
-                 
-                 {/* Page Number Mockup */}
-                 <div style={{ position: 'absolute', bottom: '40px', left: '0', right: '0', textAlign: 'center', fontSize: '0.8rem', color: '#888', fontStyle: 'italic' }}>
-                    Confidential - Page 1
-                 </div>
               </motion.div>
             </AnimatePresence>
-            
-            {/* Regulatory Footer Tag */}
-            <div style={{ margin: '40px 0', opacity: 0.5, border: '1px solid #9CA3AF', padding: '10px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-               <FileCheck size={16} />
-               <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.05em' }}>DIGITAL PREVIEW WATERMARK - NOT FOR FINAL SUBMISSION</span>
-            </div>
          </div>
       </div>
       <style>{`
