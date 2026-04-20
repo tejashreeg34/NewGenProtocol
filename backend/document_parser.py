@@ -181,25 +181,29 @@ SOA_SYSTEM = (
 
 SOA_PROMPT = """\
 Extract the Schedule of Activities (SoA) table from the clinical trial tables below.
+Return a structured JSON describing the Procedures and which Visit names they are performed in.
 
 Return:
 {{
-  "headers": ["Procedure", "Visit1", "Visit2", ...],
-  "rows": [
-    ["Procedure name", "1", "0", "1", ...],
-    ["Another procedure", "0", "1", "0", ...]
+  "visits": ["Screening", "Visit 1", "Visit 2"],
+  "procedures": [
+    {{
+      "procedure": "Informed consent",
+      "visits": ["Screening", "Visit 1"]
+    }},
+    {{
+      "procedure": "Another procedure",
+      "visits": ["Visit 1", "Visit 2"]
+    }}
   ]
 }}
 
 RULES:
-- headers[0] MUST be the literal string "Procedure"
-- headers[1..n] = visit/timepoint names from the document (e.g. "Screening", "Day 1", "Week 4")
-- rows[i][0] = procedure/assessment name
-- rows[i][1..n] = "1" if performed at that visit (mark ✓ ✔ X x Y Yes • or any check symbol), else "0"
-- Include ALL rows including sub-category rows
-- CRITICAL: You must aggressively align the marks to the exact visit columns. Even if the raw text is jagged, trace which visit an "X" or mark corresponds to.
-- CRITICAL: The length of EVERY row array `rows[i]` MUST EXACTLY EQUAL the length of the `headers` array! Fill trailing empty visits with "0".
-- If no SoA table found, return {{"headers": [], "rows": []}}
+- `visits` is a list of ALL valid column names/timepoints found in the header of the table.
+  CRITICAL: Simplify long column names into a SINGLE concise name (e.g., if "Screening Day 7 to 14", output "Screening". If "Visit 1 (Day 1)", output "Visit 1"). KEEP COLUMN NAMES VERY SHORT.
+- `procedures` is a list of objects. `procedure` is the row name. `visits` is a list of the exact visit names (from your `visits` array) where ANY mark exists for this procedure (examples of marks: X, 1, v, •, ✓, Yes). DO NOT INCLUDE VISITS WHERE NO MARK EXISTS!
+- Include ALL procedures, even sub-category rows.
+- CRITICAL: Trace carefully which visit column a mark falls under! If the table spans multiple pages, logic-trace the column headers.
 
 TABLE DATA:
 ---
@@ -742,9 +746,9 @@ class DocumentParser:
 
         # ── Prepare text slices ──
         # Reduce character budgets drastically (approx. 4 chars per token)
-        cover_text = self._smart_cover(paragraphs, full_text, budget=4000)
-        synopsis_text = self._smart_synopsis_text(full_text, budget=6000)
-        table_text = self._tables_to_pipe(tables_data, budget=8000)
+        cover_text = self._smart_cover(paragraphs, full_text, budget=24000)
+        synopsis_text = self._smart_synopsis_text(full_text, budget=24000)
+        table_text = self._tables_to_pipe(tables_data, budget=16000)
 
         # ── Call 1: Metadata ──
         meta = self._groq_call(client, META_SYSTEM, META_PROMPT.format(text=cover_text),
@@ -758,7 +762,7 @@ class DocumentParser:
         soa = {"headers": [], "rows": []}
         if table_text.strip():
             soa = self._groq_call(client, SOA_SYSTEM, SOA_PROMPT.format(tables=table_text),
-                                  max_tokens=3000, label="SoA")
+                                  max_tokens=3000, label="SoA", model_name="llama-3.3-70b-versatile")
 
         # ── Call 4: TOC (LLM agent — array response, not json_object mode) ──
         toc_tree = []
@@ -767,11 +771,11 @@ class DocumentParser:
 
         return self._assemble(meta, syn, soa, sections, soa_image_url, full_text, toc_tree, tables_data=tables_data)
 
-    def _groq_call(self, client, system: str, user: str, max_tokens: int, label: str) -> dict:
+    def _groq_call(self, client, system: str, user: str, max_tokens: int, label: str, model_name: str = None) -> dict:
         """Single Groq call with JSON mode. Returns parsed dict."""
         try:
             resp = client.chat.completions.create(
-                model=GROQ_MODEL,
+                model=model_name or GROQ_MODEL,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user",   "content": user},
@@ -794,16 +798,16 @@ class DocumentParser:
         Returns a list (array) — cannot use json_object mode since the root is [].
         """
         try:
-            prepared = self._prepare_raw_toc_for_llm(raw_toc_text)
+            prepared = self._prepare_raw_toc_for_llm(raw_toc_text, budget=40000)
             user_prompt = TOC_USER_TEMPLATE.format(raw_toc=prepared)
             resp = client.chat.completions.create(
-                model=GROQ_MODEL,
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": TOC_SYSTEM},
                     {"role": "user",   "content": user_prompt},
                 ],
                 temperature=0.0,
-                max_tokens=2000,
+                max_tokens=8000,
             )
             raw = resp.choices[0].message.content.strip()
             # Strip accidental markdown fences
@@ -981,35 +985,29 @@ class DocumentParser:
 
         # ── B: No outline — find TOC page(s) by scanning text ──────────────
         toc_chunks = []
-        in_toc = False
-
-        for i, page in enumerate(reader.pages[:50]):
+        for i, page in enumerate(reader.pages[:60]):
             text = (page.extract_text() or "").strip()
             if not text:
                 continue
 
-            lower = text.lower()
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            
+            # Count precise TOC-like lines (dot leaders, or multiple spaces ending in number)
+            toc_lines = sum(1 for l in lines if re.search(r'[.\-]{4,}\s*\d+\s*$', l) or re.search(r'\s{5,}\d+\s*$', l))
+            
+            # Check for direct TOC headers in the first 400 chars of the page
+            is_header = bool(re.search(r'(?i)^\s*(?:Table\s+of\s+Contents|Contents)\b', text[:400]))
 
-            # Detect TOC page start
-            if not in_toc and ("table of contents" in lower or "contents" in lower):
-                in_toc = True
-
-            if in_toc:
+            # Disregard heavy prose pages that don't pass the strict TOC criteria above
+            if toc_lines >= 3 or is_header:
                 toc_chunks.append(text)
-                # Stop after 10 pages once inside TOC (multi-page TOCs)
-                if len(toc_chunks) >= 10:
-                    break
-                # Stop if we see a section heading that clearly is no longer TOC
-                if len(toc_chunks) > 1 and self._looks_like_body_page(text):
-                    toc_chunks.pop()  # remove the body page we just added
-                    break
 
         if toc_chunks:
             return "\n\n--- PAGE BREAK ---\n\n".join(toc_chunks)
 
-        # Fallback: first 10 pages
+        # Fallback: first 35 pages
         fallback = []
-        for page in reader.pages[:10]:
+        for page in reader.pages[:35]:
             fallback.append(page.extract_text() or "")
         return "\n".join(fallback)
 
@@ -1030,8 +1028,8 @@ class DocumentParser:
     def _looks_like_body_page(self, text: str) -> bool:
         """Heuristic: is this page actual document body rather than TOC?"""
         lines = [l.strip() for l in text.splitlines() if l.strip()]
-        # Body pages typically have long prose sentences
-        long_lines = sum(1 for l in lines if len(l) > 120)
+        # Body pages typically have long prose sentences (ignore dot leader lines)
+        long_lines = sum(1 for l in lines if len(l) > 120 and not re.search(r'[.\-]{5,}\s*\d+\s*$', l))
         return long_lines >= 3
 
     # ──────────────────────────────────────────────
@@ -1045,59 +1043,92 @@ class DocumentParser:
         lst = lambda d, k: [str(v).strip() for v in (d.get(k) or []) if v and str(v).strip()]
 
         # ── Scalars from meta ──
-        result['protocol_title']          = s(meta, 'protocol_title')
-        result['protocol_number']         = s(meta, 'protocol_number')
+        # Properly map LLM keys ("study_id", "version", "date", "phase") to frontend keys
+        result['protocol_title']          = s(meta, 'title') or s(meta, 'protocol_title')
+        result['protocol_number']         = s(meta, 'study_id') or s(meta, 'protocol_number')
         result['nct_number']              = s(meta, 'nct_number')
-        result['principal_investigator']  = s(meta, 'principal_investigator')
+        result['principal_investigator']  = s(meta, 'investigator') or s(meta, 'principal_investigator')
         result['sponsor']                 = s(meta, 'sponsor')
         result['funded_by']               = s(meta, 'funded_by')
-        result['version_number']          = s(meta, 'version_number') or 'v1.0'
-        result['protocol_date']           = s(meta, 'protocol_date')
+        result['version_number']          = s(meta, 'version') or s(meta, 'version_number') or 'v1.0'
+        result['protocol_date']           = s(meta, 'date') or s(meta, 'protocol_date')
 
         # ── Approval details ──
         d = result['approval_data']['details']
         d['protocol_name']              = result['protocol_title']
         d['protocol_number']            = result['protocol_number']
-        d['imp']                        = s(meta, 'imp')
-        d['indication']                 = s(meta, 'indication')
-        d['clinical_phase']             = s(meta, 'clinical_phase')
+        d['clinical_phase']             = s(meta, 'phase') or s(meta, 'clinical_phase')
         d['investigators']              = result['principal_investigator']
+        d['sponsor_name_address']       = result['sponsor']
         d['coordinating_investigator']  = s(meta, 'coordinating_investigator')
         d['expert_committee']           = s(meta, 'expert_committee')
-        d['sponsor_name_address']       = s(meta, 'sponsor_name_address')
+        d['imp']                        = s(meta, 'imp')
+        d['indication']                 = s(meta, 'indication')
 
         # ── Synopsis overview ──
         ov = result['synopsis_data']['overview']
         ov['title']                     = result['protocol_title']
+        ov['investigators']             = result['principal_investigator']
+        ov['clinical_phase']            = s(meta, 'phase') or s(meta, 'clinical_phase')
         ov['coordinating_investigator'] = s(meta, 'coordinating_investigator')
         ov['expert_committee']          = s(meta, 'expert_committee')
-        ov['investigators']             = result['principal_investigator']
         ov['trial_sites']               = s(meta, 'trial_sites')
         ov['planned_period']            = s(meta, 'planned_period')
         ov['fpfv']                      = s(meta, 'fpfv')
         ov['lplv']                      = s(meta, 'lplv')
-        ov['clinical_phase']            = s(meta, 'clinical_phase')
 
         # ── Objectives / Endpoints from synopsis call ──
-        result['synopsis_data']['objectives']['primary']     = lst(syn, 'primary_objectives')
-        result['synopsis_data']['objectives']['secondary']   = lst(syn, 'secondary_objectives')
-        result['synopsis_data']['objectives']['exploratory'] = lst(syn, 'exploratory_objectives')
-        result['synopsis_data']['endpoints']['primary']      = lst(syn, 'primary_endpoints')
-        result['synopsis_data']['endpoints']['secondary']    = lst(syn, 'secondary_endpoints')
-        result['synopsis_data']['endpoints']['exploratory']  = lst(syn, 'exploratory_endpoints')
-        result['synopsis_data']['num_patients']              = s(meta, 'num_patients')
+        # Depending on if the AI returned a nested object, correctly load
+        if isinstance(syn.get('objectives'), dict):
+            result['synopsis_data']['objectives']['primary']     = lst(syn['objectives'], 'primary')
+            result['synopsis_data']['objectives']['secondary']   = lst(syn['objectives'], 'secondary')
+            result['synopsis_data']['objectives']['exploratory'] = lst(syn['objectives'], 'exploratory')
+        else:
+            result['synopsis_data']['objectives']['primary']     = lst(syn, 'primary_objectives')
+            result['synopsis_data']['objectives']['secondary']   = lst(syn, 'secondary_objectives')
+            result['synopsis_data']['objectives']['exploratory'] = lst(syn, 'exploratory_objectives')
+            
+        if isinstance(syn.get('endpoints'), dict):
+            result['synopsis_data']['endpoints']['primary']      = lst(syn['endpoints'], 'primary')
+            result['synopsis_data']['endpoints']['secondary']    = lst(syn['endpoints'], 'secondary')
+            result['synopsis_data']['endpoints']['exploratory']  = lst(syn['endpoints'], 'exploratory')
+        else:
+            result['synopsis_data']['endpoints']['primary']      = lst(syn, 'primary_endpoints')
+            result['synopsis_data']['endpoints']['secondary']    = lst(syn, 'secondary_endpoints')
+            result['synopsis_data']['endpoints']['exploratory']  = lst(syn, 'exploratory_endpoints')
+            
+        result['synopsis_data']['patients']                  = s(syn, 'patients')
         result['synopsis_data']['statistical_methods']       = s(syn, 'statistical_methods')
 
-        incl = lst(syn, 'inclusion_criteria')
-        excl = lst(syn, 'exclusion_criteria')
-        result['synopsis_data']['inclusion'] = {'text': '\n'.join(incl), 'points': incl}
-        result['synopsis_data']['exclusion'] = {'text': '\n'.join(excl), 'points': excl}
+        # Handle updated inclusion/exclusion JSON structures from LLM
+        if isinstance(syn.get('inclusion'), dict):
+            incl = syn['inclusion'].get('points') or []
+            incl_text = syn['inclusion'].get('text') or '\n'.join(incl)
+        else:
+            incl = lst(syn, 'inclusion_criteria')
+            incl_text = '\n'.join(incl)
+            
+        if isinstance(syn.get('exclusion'), dict):
+            excl = syn['exclusion'].get('points') or []
+            excl_text = syn['exclusion'].get('text') or '\n'.join(excl)
+        else:
+            excl = lst(syn, 'exclusion_criteria')
+            excl_text = '\n'.join(excl)
+            
+        result['synopsis_data']['inclusion'] = {'text': incl_text, 'points': incl}
+        result['synopsis_data']['exclusion'] = {'text': excl_text, 'points': excl}
+
+        if isinstance(syn.get('team'), dict):
+            result['synopsis_data']['team'] = {
+                'investigator_desc': s(syn['team'], 'investigator_desc'),
+                'coordinator_desc': s(syn['team'], 'coordinator_desc')
+            }
 
         # ── Populate Section 3 (Objectives/Endpoints) Table ──
-        prim_objs = lst(syn, 'primary_objectives')
-        prim_ends = lst(syn, 'primary_endpoints')
-        sec_objs = lst(syn, 'secondary_objectives')
-        sec_ends = lst(syn, 'secondary_endpoints')
+        prim_objs = result['synopsis_data']['objectives']['primary']
+        prim_ends = result['synopsis_data']['endpoints']['primary']
+        sec_objs = result['synopsis_data']['objectives']['secondary']
+        sec_ends = result['synopsis_data']['endpoints']['secondary']
         exp_objs = lst(syn, 'exploratory_objectives')
         exp_ends = lst(syn, 'exploratory_endpoints')
 
@@ -1170,31 +1201,54 @@ class DocumentParser:
                 del result['sections'][k]
 
         # ── SoA table ──
-        CHECKS = {'1','x','✓','✔','y','yes','true','•','×','xi','checked','v'}
-        g_hdrs = soa.get('headers', [])
-        g_rows = soa.get('rows', [])
-
-        if isinstance(g_hdrs, list) and g_hdrs and isinstance(g_rows, list) and g_rows:
-            clean_hdrs = [str(h).strip() for h in g_hdrs if str(h).strip()]
-            if clean_hdrs and clean_hdrs[0].lower() not in ['procedure', 'procedures', 'assessment', 'assessments']:
-                clean_hdrs.insert(0, 'Procedure')
-                
+        g_visits = soa.get('visits')
+        g_procs = soa.get('procedures')
+        
+        # New associative mapping style
+        if isinstance(g_visits, list) and isinstance(g_procs, list):
+            clean_hdrs = ["Procedure"] + [str(h).strip() for h in g_visits if str(h).strip()]
             clean_rows = []
-            for row in g_rows:
-                if not isinstance(row, list) or not row:
-                    continue
-                proc = str(row[0]).strip()
-                expected = max(0, len(clean_hdrs) - 1)
-                cells = []
-                for c in row[1:]:
-                    cv = str(c).strip().lower()
-                    cells.append('1' if cv in CHECKS else '0')
-                while len(cells) < expected:
-                    cells.append('0')
-                clean_rows.append([proc] + cells[:expected])
+            
+            for p in g_procs:
+                if not isinstance(p, dict): continue
+                proc_name = str(p.get('procedure', '')).strip()
+                if not proc_name: continue
+                
+                perf_visits = set(str(v).strip() for v in p.get('visits', []) if str(v).strip())
+                row = [proc_name]
+                for header in clean_hdrs[1:]:
+                    row.append('1' if header in perf_visits else '0')
+                clean_rows.append(row)
+                
             if clean_rows:
                 result['soa_data']['table']['headers'] = clean_hdrs
                 result['soa_data']['table']['rows']    = clean_rows
+                
+        # Legacy positional array fallback
+        elif isinstance(soa.get('headers'), list) and isinstance(soa.get('rows'), list):
+            CHECKS = {'1','x','✓','✔','y','yes','true','•','×','xi','checked','v'}
+            g_hdrs = soa.get('headers', [])
+            g_rows = soa.get('rows', [])
+            if g_hdrs and g_rows:
+                clean_hdrs = [str(h).strip() for h in g_hdrs if str(h).strip()]
+                if clean_hdrs and clean_hdrs[0].lower() not in ['procedure', 'procedures', 'assessment', 'assessments']:
+                    clean_hdrs.insert(0, 'Procedure')
+                    
+                clean_rows = []
+                for row in g_rows:
+                    if not isinstance(row, list) or not row: continue
+                    proc = str(row[0]).strip()
+                    expected = max(0, len(clean_hdrs) - 1)
+                    cells = []
+                    for c in row[1:]:
+                        cv = str(c).strip().lower()
+                        cells.append('1' if cv in CHECKS else '0')
+                    while len(cells) < expected:
+                        cells.append('0')
+                    clean_rows.append([proc] + cells[:expected])
+                if clean_rows:
+                    result['soa_data']['table']['headers'] = clean_hdrs
+                    result['soa_data']['table']['rows']    = clean_rows
         else:
             # Regex SoA fallback — use the raw tables_data from pdfplumber
             result['soa_data'] = self._regex_soa(
@@ -1343,10 +1397,15 @@ class DocumentParser:
         ordered_subs = build_ordered(children, 1)
 
         # Merge the text content of any heuristic "leftovers" into the main section body
-        # NO: we keep them because TOC misses legitimate sub-sections sometimes.
+        # This prevents unauthorized OCR fragments (e.g. titles like "1") from polluting the UI
+        leftover_text = []
         for sub in existing_subs:
-            if sub is not None:
-                ordered_subs.append(sub)
+            if sub is not None and sub.get('content'):
+                leftover_text.append(f"<p><b>{sub.get('title','')}</b></p>\n{sub.get('content','')}")
+        
+        if leftover_text:
+            existing_main = section.setdefault('main', '')
+            section['main'] = (existing_main + "\n\n" + "\n\n".join(leftover_text)).strip()
 
         section['subsections'] = ordered_subs
 

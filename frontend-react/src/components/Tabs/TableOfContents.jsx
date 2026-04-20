@@ -135,7 +135,7 @@ const TocTreeNode = ({ node, depth = 0, navigateTo, sections }) => {
 // ─────────────────────────────────────────────────────────────────
 // Static fallback groups (for DOCX / no toc_tree)
 // ─────────────────────────────────────────────────────────────────
-const STATIC_TOC_GROUPS = (sections, navigateTo) => [
+const STATIC_BASE_GROUPS = [
   { 
     id: 'core', 
     label: 'Core Information', 
@@ -152,24 +152,25 @@ const STATIC_TOC_GROUPS = (sections, navigateTo) => [
       { id: 'schema', label: 'Study Schema', icon: Map, tab: 'synopsis' },
       { id: 'soa', label: 'Schedule of Activities', icon: Clock, tab: 'synopsis' },
     ]
-  },
-  {
-    id: 'protocol-sections',
-    label: 'Protocol Details',
-    items: Object.entries(sections).filter(([id]) => id !== '0').sort(([a], [b]) => parseInt(a) - parseInt(b)).map(([id, section]) => ({
-      id: `section-${id}`,
-      label: `${id}. ${section.title}`,
-      icon: ClipboardList,
-      tab: 'sections',
-      sectionId: id,
-      subsections: (section.subsections || []).map((sub, sIdx) => ({
-        label: `${id}.${sIdx + 1} ${sub.title}`,
-        sectionId: id,
-        subIndex: sIdx
-      }))
-    }))
   }
 ];
+
+const STATIC_PROTOCOL_DETAILS = (sections) => ({
+  id: 'protocol-sections',
+  label: 'Protocol Details',
+  items: Object.entries(sections).filter(([id]) => id !== '0').sort(([a], [b]) => parseInt(a) - parseInt(b)).map(([id, section]) => ({
+    id: `section-${id}`,
+    label: `${id}. ${section.title}`,
+    icon: ClipboardList,
+    tab: 'sections',
+    sectionId: id,
+    subsections: (section.subsections || []).map((sub, sIdx) => ({
+      label: sub.number ? `${sub.number} ${sub.title}` : `${id}.${sIdx + 1} ${sub.title}`,
+      sectionId: id,
+      subIndex: sIdx
+    }))
+  }))
+});
 
 // ─────────────────────────────────────────────────────────────────
 // Main Component
@@ -201,131 +202,88 @@ const TableOfContents = () => {
         </p>
       </div>
 
-      {hasDynamicToc ? (
-        // ── DYNAMIC: LLM-parsed TOC tree from PDF ──
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Quick-nav strip (still show the standard tabs) */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="card"
-            style={{ padding: '20px 24px' }}
-          >
-            <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-lime)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              Quick Navigation
-              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.5 }}></div>
-            </h3>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {[
-                { label: 'Title Page', icon: FileText, tab: 'title-page' },
-                { label: 'Approval', icon: CheckSquare, tab: 'approval' },
-                { label: 'Synopsis', icon: FileSpreadsheet, tab: 'synopsis' },
-                { label: 'Protocol Sections', icon: ClipboardList, tab: 'sections' },
-              ].map(item => (
-                <motion.button
-                  key={item.tab}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => navigateTo(item.tab)}
-                  className="btn btn-secondary small"
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600 }}
-                >
-                  <item.icon size={14} />
-                  {item.label}
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Dynamic TOC tree */}
-          <motion.div
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+        {[...STATIC_BASE_GROUPS, ...(hasDynamicToc ? [] : [STATIC_PROTOCOL_DETAILS(sections)])].map((group, gIdx) => (
+          <motion.div 
+            key={group.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: gIdx * 0.1 }}
             className="card"
-            style={{ padding: '0', overflow: 'hidden' }}
+            style={{ padding: '32px' }}
           >
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-gray)' }}>
-              <BookOpen size={18} color="var(--primary-lime)" />
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
-                Protocol Table of Contents
-              </h3>
-              <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--text-muted)', background: 'var(--light-lime)', padding: '3px 10px', borderRadius: '8px', fontWeight: 700 }}>
-                {tocTree.length} sections
-              </span>
-            </div>
-            <div style={{ padding: '12px 8px' }}>
-              {tocTree.map((node, idx) => (
-                <TocTreeNode
-                  key={idx}
-                  node={node}
-                  depth={0}
-                  navigateTo={navigateTo}
-                  sections={sections}
-                />
+            <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary-lime)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {group.label}
+              <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.5 }}></div>
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {group.items.map((item, iIdx) => (
+                <div key={item.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                  <motion.div 
+                    whileHover={{ x: 6 }}
+                    onClick={() => navigateTo(item.tab, item.sectionId)}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: '14px', 
+                      padding: '12px 16px', borderRadius: '12px', 
+                      cursor: 'pointer', background: 'var(--bg-gray)',
+                      transition: 'all 0.2s ease'
+                    }}
+                    className="toc-item"
+                  >
+                    <div style={{ background: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--dark-lime)', boxShadow: 'var(--shadow-sm)' }}>
+                      <item.icon size={16} />
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', flex: 1 }}>{item.label}</span>
+                    <ChevronRight size={16} color="var(--text-muted)" />
+                  </motion.div>
+
+                  {item.subsections && item.subsections.length > 0 && (
+                    <div style={{ marginLeft: '46px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '1px solid var(--border-color)', paddingLeft: '20px' }}>
+                      {item.subsections.map((sub, sIdx) => (
+                        <motion.div 
+                          key={sIdx}
+                          whileHover={{ color: 'var(--primary-lime)', x: 4 }}
+                          onClick={() => navigateTo('sections', sub.sectionId, sub.subIndex)}
+                          style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500, cursor: 'pointer', padding: '4px 0' }}
+                        >
+                          {sub.label}
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </motion.div>
-        </div>
-      ) : (
-        // ── STATIC fallback (DOCX or no toc_tree) ──
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-          {STATIC_TOC_GROUPS(sections, navigateTo).map((group, gIdx) => (
-            <motion.div 
-              key={group.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: gIdx * 0.1 }}
-              className="card"
-              style={{ padding: '32px' }}
-            >
-              <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary-lime)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {group.label}
-                <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.5 }}></div>
-              </h3>
+        ))}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {group.items.map((item, iIdx) => (
-                  <div key={item.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                    <motion.div 
-                      whileHover={{ x: 6 }}
-                      onClick={() => navigateTo(item.tab, item.sectionId)}
-                      style={{ 
-                        display: 'flex', alignItems: 'center', gap: '14px', 
-                        padding: '12px 16px', borderRadius: '12px', 
-                        cursor: 'pointer', background: 'var(--bg-gray)',
-                        transition: 'all 0.2s ease'
-                      }}
-                      className="toc-item"
-                    >
-                      <div style={{ background: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--dark-lime)', boxShadow: 'var(--shadow-sm)' }}>
-                        <item.icon size={16} />
-                      </div>
-                      <span style={{ fontWeight: 700, fontSize: '0.95rem', flex: 1 }}>{item.label}</span>
-                      <ChevronRight size={16} color="var(--text-muted)" />
-                    </motion.div>
-
-                    {item.subsections && item.subsections.length > 0 && (
-                      <div style={{ marginLeft: '46px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px', borderLeft: '1px solid var(--border-color)', paddingLeft: '20px' }}>
-                        {item.subsections.map((sub, sIdx) => (
-                          <motion.div 
-                            key={sIdx}
-                            whileHover={{ color: 'var(--primary-lime)', x: 4 }}
-                            onClick={() => navigateTo('sections', sub.sectionId, sub.subIndex)}
-                            style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500, cursor: 'pointer', padding: '4px 0' }}
-                          >
-                            {sub.label}
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      )}
+        {hasDynamicToc && (
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.2 }}
+             className="card"
+             style={{ padding: '32px' }}
+           >
+             <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary-lime)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+               Protocol Details
+               <div style={{ flex: 1, height: '1px', background: 'var(--border-color)', opacity: 0.5 }}></div>
+             </h3>
+             <div style={{ padding: '0px' }}>
+               {tocTree.map((node, idx) => (
+                 <TocTreeNode
+                   key={idx}
+                   node={node}
+                   depth={0}
+                   navigateTo={navigateTo}
+                   sections={sections}
+                 />
+               ))}
+             </div>
+           </motion.div>
+        )}
+      </div>
     </div>
   );
 };

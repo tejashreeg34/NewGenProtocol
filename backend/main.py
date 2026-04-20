@@ -942,58 +942,58 @@ async def render_preview(request: Request):
         # ── CSS ──────────────────────────────────────────────────────────────
         parts.append("""
         <style>
-          * { box-sizing: border-box; }
-          body { font-family: 'Calibri', 'Segoe UI', sans-serif; font-size: 11pt; color: #1a1a1a; line-height: 1.6; margin: 0; padding: 0; }
-          h1.sec { font-size: 14pt; font-weight: 700; color: #0d1f3c; border-bottom: 2.5px solid #22c55e; padding-bottom: 6px; margin-top: 36px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
-          h2.sub { font-size: 12pt; font-weight: 700; color: #1a3a5c; margin-top: 22px; margin-bottom: 8px; }
-          h3.subsub { font-size: 11pt; font-weight: 600; color: #2c5282; margin-top: 14px; margin-bottom: 6px; }
-          p { margin: 6px 0 8px 0; text-align: justify; }
-          ul { margin: 4px 0 8px 28px; padding: 0; }
-          li { margin-bottom: 4px; }
+          .preview-doc * { box-sizing: border-box; }
+          .preview-doc { font-family: 'Calibri', 'Segoe UI', sans-serif; font-size: 11pt; color: #1a1a1a; line-height: 1.6; margin: 0; padding: 0; }
+          .preview-doc h1.sec { font-size: 14pt; font-weight: 700; color: #0d1f3c; border-bottom: 2.5px solid #22c55e; padding-bottom: 6px; margin-top: 36px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
+          .preview-doc h2.sub { font-size: 12pt; font-weight: 700; color: #1a3a5c; margin-top: 22px; margin-bottom: 8px; }
+          .preview-doc h3.subsub { font-size: 11pt; font-weight: 600; color: #2c5282; margin-top: 14px; margin-bottom: 6px; }
+          .preview-doc p { margin: 6px 0 8px 0; text-align: justify; }
+          .preview-doc ul { margin: 4px 0 8px 28px; padding: 0; }
+          .preview-doc li { margin-bottom: 4px; }
 
-          /* ── Title block ── */
-          .title-block { text-align: center; margin-bottom: 36px; padding: 28px 32px; background: transparent; border: none; }
-          .title-block h1 { font-size: 15pt; font-weight: 900; color: #0d1f3c; margin: 0 0 12px 0; line-height: 1.3; }
-          .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; max-width: 600px; margin: 0 auto; text-align: left; font-size: 9.5pt; }
-          .meta-item b { color: #166534; }
+          /* \u2500\u2500 Title block \u2500\u2500 */
+          .preview-doc .title-block { text-align: center; margin-bottom: 36px; padding: 28px 32px; }
+          .preview-doc .title-block h1 { font-size: 15pt; font-weight: 900; color: #0d1f3c; margin: 0 0 12px 0; line-height: 1.3; word-break: break-word; overflow-wrap: anywhere; }
+          .preview-doc .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; max-width: 600px; margin: 0 auto; text-align: left; font-size: 9.5pt; }
+          .preview-doc .meta-item b { color: #166534; }
 
-          /* ── Compliance callout ── */
-          .compliance { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; font-size: 10pt; border-radius: 0 6px 6px 0; }
+          /* \u2500\u2500 Compliance callout \u2500\u2500 */
+          .preview-doc .compliance { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; font-size: 10pt; border-radius: 0 6px 6px 0; }
 
-          /* ── Page break ── */
-          .page-break { margin: 36px 0; border: none; border-top: 2px dashed #e5e7eb; }
+          /* \u2500\u2500 Page break \u2500\u2500 */
+          .preview-doc .page-break { margin: 36px 0; border: none; border-top: 2px dashed #e5e7eb; }
 
-          /* ── TOC table ── */
-          .toc-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
-          .toc-table tr:hover { background: #f9fafb; }
-          .toc-num  { width: 60px; font-weight: 700; color: #0d1f3c; padding: 4px 8px 4px 0; vertical-align: top; white-space: nowrap; }
-          .toc-title { padding: 4px 8px; color: #1a1a1a; vertical-align: top; }
-          .toc-dots  { border-bottom: 1px dotted #9ca3af; flex: 1; min-width: 20px; }
-          .toc-page  { width: 40px; text-align: right; color: #6b7280; font-weight: 600; padding: 4px 0 4px 8px; white-space: nowrap; vertical-align: top; }
-          .toc-l0 .toc-title { font-weight: 700; color: #0d1f3c; }
-          .toc-l1 .toc-num, .toc-l1 .toc-title { padding-left: 20px; color: #374151; font-size: 9.5pt; }
-          .toc-l2 .toc-num, .toc-l2 .toc-title { padding-left: 40px; color: #6b7280; font-size: 9pt; }
+          /* \u2500\u2500 TOC table \u2500\u2500 */
+          .preview-doc .toc-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+          .preview-doc .toc-table tr:hover { background: #f9fafb; }
+          .preview-doc .toc-num  { width: 60px; font-weight: 700; color: #0d1f3c; padding: 4px 8px 4px 0; vertical-align: top; white-space: nowrap; }
+          .preview-doc .toc-title { padding: 4px 8px; color: #1a1a1a; vertical-align: top; }
+          .preview-doc .toc-page  { width: 40px; text-align: right; color: #6b7280; font-weight: 600; padding: 4px 0 4px 8px; white-space: nowrap; vertical-align: top; }
+          .preview-doc .toc-l0 .toc-title { font-weight: 700; color: #0d1f3c; }
+          .preview-doc .toc-l1 .toc-num, .preview-doc .toc-l1 .toc-title { padding-left: 20px; color: #374151; font-size: 9.5pt; }
+          .preview-doc .toc-l2 .toc-num, .preview-doc .toc-l2 .toc-title { padding-left: 40px; color: #6b7280; font-size: 9pt; }
 
-          /* ── SoA table (clinical format) ── */
-          .soa-container { overflow-x: auto; margin: 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; }
-          .soa-table { border-collapse: collapse; font-size: 8pt; min-width: 100%; }
-          .soa-table thead tr { background: #0d1f3c; }
-          .soa-table thead th { color: white; padding: 7px 6px; text-align: center; font-weight: 700; border: 1px solid #1e3a5f; white-space: nowrap; font-size: 7.5pt; }
-          .soa-table thead th.proc-hdr { text-align: left; min-width: 180px; font-size: 8pt; background: #0a172e; }
-          .soa-table tbody tr:nth-child(even) { background: #f8fafc; }
-          .soa-table tbody tr:hover { background: #f0fdf4; }
-          .soa-table td { border: 1px solid #e2e8f0; padding: 5px 6px; text-align: center; vertical-align: middle; }
-          .soa-table td.proc-cell { text-align: left; font-weight: 600; color: #1e293b; background: #f8fafc; min-width: 180px; padding-left: 10px; }
-          .soa-table td.proc-cell.category { background: #e8f4fd; font-weight: 700; color: #0d1f3c; font-size: 8.5pt; }
-          .chk { color: #16a34a; font-size: 12pt; font-weight: 900; line-height: 1; }
+          /* \u2500\u2500 SoA table (clinical format) \u2500\u2500 */
+          .preview-doc .soa-container { overflow-x: auto; margin: 12px 0; border: 1px solid #cbd5e1; border-radius: 6px; }
+          .preview-doc .soa-table { border-collapse: collapse; font-size: 8pt; min-width: 100%; }
+          .preview-doc .soa-table thead tr { background: #0d1f3c; }
+          .preview-doc .soa-table thead th { color: white; padding: 7px 6px; text-align: center; font-weight: 700; border: 1px solid #1e3a5f; white-space: nowrap; font-size: 7.5pt; }
+          .preview-doc .soa-table thead th.proc-hdr { text-align: left; min-width: 180px; font-size: 8pt; background: #0a172e; }
+          .preview-doc .soa-table tbody tr:nth-child(even) { background: #f8fafc; }
+          .preview-doc .soa-table tbody tr:hover { background: #f0fdf4; }
+          .preview-doc .soa-table td { border: 1px solid #e2e8f0; padding: 5px 6px; text-align: center; vertical-align: middle; }
+          .preview-doc .soa-table td.proc-cell { text-align: left; font-weight: 600; color: #1e293b; background: #f8fafc; min-width: 180px; padding-left: 10px; }
+          .preview-doc .soa-table td.proc-cell.category { background: #e8f4fd; font-weight: 700; color: #0d1f3c; font-size: 8.5pt; }
+          .preview-doc .chk { color: #16a34a; font-size: 12pt; font-weight: 900; line-height: 1; }
 
-          /* ── Content tables (Objectives / Abbreviations) ── */
-          .content-table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }
-          .content-table th { background: #1e3a5f; color: white; padding: 8px 10px; text-align: left; font-weight: 700; }
-          .content-table td { border: 1px solid #d1d5db; padding: 6px 10px; vertical-align: top; }
-          .content-table tr:nth-child(even) td { background: #f9fafb; }
+          /* \u2500\u2500 Content tables (Objectives / Abbreviations) \u2500\u2500 */
+          .preview-doc .content-table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10pt; }
+          .preview-doc .content-table th { background: #1e3a5f; color: white; padding: 8px 10px; text-align: left; font-weight: 700; }
+          .preview-doc .content-table td { border: 1px solid #d1d5db; padding: 6px 10px; vertical-align: top; }
+          .preview-doc .content-table tr:nth-child(even) td { background: #f9fafb; }
         </style>
         """)
+        parts.append('<div class="preview-doc">')
 
         # ── TITLE PAGE ───────────────────────────────────────────────────────
         parts.append(f"""
@@ -1189,7 +1189,7 @@ async def render_preview(request: Request):
                         parts.append(f'<tr><td class="{cell_cls}">{e(proc)}</td>')
                         for c in rest:
                             cv = str(c).strip().lower()
-                            mark = '<span class="check">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
+                            mark = '<span class="chk">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
                             parts.append(f'<td>{mark}</td>')
                         parts.append('</tr>')
                 else:
@@ -1205,7 +1205,7 @@ async def render_preview(request: Request):
                         parts.append(f'<tr><td class="proc-cell">{e(proc)}</td>')
                         for c in row[1:]:
                             cv = str(c).strip().lower()
-                            mark = '<span class="check">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
+                            mark = '<span class="chk">✓</span>' if cv in ('1', 'true', 'yes', 'y', 'x', '✓', '✔') else ''
                             parts.append(f'<td>{mark}</td>')
                         parts.append('</tr>')
 
@@ -1276,6 +1276,7 @@ async def render_preview(request: Request):
 
 
 
+        parts.append('</div>')  # Close .preview-doc
         return JSONResponse(content={"html": "\n".join(parts)})
 
 

@@ -26,3 +26,51 @@ Traceback (most recent call last):
     raw_lines = re.sub(r'<br\s*/?>', '\n', sec0['main']).split('\n')
                 ^^
 NameError: name 're' is not defined. Did you forget to import 're'
+
+=== GENERATE WORD ERROR ===
+Traceback (most recent call last):
+  File "C:\Users\2000171847\Downloads\nextgen\NewGenProtocol\backend\main.py", line 454, in generate_word
+    file_path = generate_complete_word_document(data.model_dump())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\2000171847\Downloads\nextgen\NewGenProtocol\backend\document_generator.py", line 1355, in generate_complete_word_document
+    doc.save(filepath)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\document.py", line 135, in save
+    self._part.save(path_or_stream)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\parts\document.py", line 111, in save
+    self.package.save(path_or_stream)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\opc\package.py", line 172, in save
+    PackageWriter.write(pkg_file, self.rels, self.parts)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\opc\pkgwriter.py", line 32, in write
+    phys_writer = PhysPkgWriter(pkg_file)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\opc\phys_pkg.py", line 141, in __init__
+    self._zipf = ZipFile(pkg_file, 'w', compression=ZIP_DEFLATED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\zipfile\__init__.py", line 1320, in __init__
+    self.fp = io.open(file, filemode)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument: 'generated_docs\\protocol_v_<x_x>_20260420_124427.docx'
+
+=== GENERATE WORD ERROR ===
+Traceback (most recent call last):
+  File "C:\Users\2000171847\Downloads\nextgen\NewGenProtocol\backend\main.py", line 454, in generate_word
+    file_path = generate_complete_word_document(data.model_dump())
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\2000171847\Downloads\nextgen\NewGenProtocol\backend\document_generator.py", line 1355, in generate_complete_word_document
+    doc.save(filepath)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\document.py", line 135, in save
+    self._part.save(path_or_stream)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\parts\document.py", line 111, in save
+    self.package.save(path_or_stream)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\opc\package.py", line 172, in save
+    PackageWriter.write(pkg_file, self.rels, self.parts)
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\opc\pkgwriter.py", line 32, in write
+    phys_writer = PhysPkgWriter(pkg_file)
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\site-packages\docx\opc\phys_pkg.py", line 141, in __init__
+    self._zipf = ZipFile(pkg_file, 'w', compression=ZIP_DEFLATED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\2000171847\AppData\Local\Programs\Python\Python312\Lib\zipfile\__init__.py", line 1320, in __init__
+    self.fp = io.open(file, filemode)
+              ^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument: 'generated_docs\\protocol_v_<x_x>_20260420_124446.docx'

@@ -383,13 +383,15 @@ def add_custom_header_footer(doc, protocol_data):
 
         # distinct columns ? allow autofit usually works best for text
         
-        # Left Cell: Protocol Title
+        # Left Cell: Protocol Title (word-wrapped, not clipped)
         cell_left = table.cell(0, 0)
         p_left = cell_left.paragraphs[0]
-        p_left.text = title_str
+        run_title = p_left.add_run(title_str)
+        run_title.font.size = Pt(9)
         p_left.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p_left.style = doc.styles['Normal']
-        # Optional: Add Protocol Number if needed, user only mentioned Title for now.
+        p_left.paragraph_format.space_after = Pt(0)
+        # Allow wrapping — do NOT set cell width to force nowrap
         
         # Right Cell: Version \n Date
         cell_right = table.cell(0, 1)
@@ -710,7 +712,9 @@ def create_soa_table(doc, soa_data):
             cells[0].text = procedure
             for i, value in enumerate(row):
                 if i + 1 < len(cells):
-                    cells[i+1].text = "X" if value else ""
+                    # Fix: string "0" is truthy in Python — check explicitly
+                    val_str = str(value).strip().lower()
+                    cells[i+1].text = 'X' if val_str not in ('0', 'false', 'no', 'n', '', 'none') else ''
 
     elif isinstance(rows, list):
         if not headers:
@@ -907,35 +911,101 @@ def add_bullet_points(doc, text):
             p = doc.add_paragraph(style='BulletList')
             p.add_run(line.strip())
 
-def create_toc(doc):
-    """Add Table of Contents field to document"""
-    # Create a new paragraph for the TOC
+def create_toc(doc, toc_tree=None):
+    """Add Table of Contents to document.
+    Renders toc_tree as a static dot-leader table (visible immediately),
+    then appends the Word TOC field (auto-updates when opened in Word).
+    """
+    # ── 1. Static toc_tree table (sections + subsections + sub-subsections) ──
+    if toc_tree:
+        toc_table = doc.add_table(rows=0, cols=3)
+        toc_table.style = 'Table Grid'
+        # Remove all borders for a clean dot-leader look
+        from docx.oxml.ns import qn as _qn
+        from docx.oxml import OxmlElement as _OE
+        tbl_pr = toc_table._tbl.tblPr
+        tbl_borders = _OE('w:tblBorders')
+        for bname in ['top','left','bottom','right','insideH','insideV']:
+            b = _OE(f'w:{bname}')
+            b.set(_qn('w:val'), 'nil')
+            tbl_borders.append(b)
+        tbl_pr.append(tbl_borders)
+
+        def _add_toc_row(node, depth=0):
+            num   = (node.get('number') or '').strip()
+            title = (node.get('title') or '').strip()
+            page  = node.get('page')
+            page_str = str(page) if page else ''
+
+            row = toc_table.add_row()
+            # Col 0 — number (indented by depth)
+            c0 = row.cells[0]
+            p0 = c0.paragraphs[0]
+            r0 = p0.add_run(num)
+            r0.bold = (depth == 0)
+            r0.font.size = Pt(11 if depth == 0 else (10 if depth == 1 else 9))
+            p0.paragraph_format.left_indent = Pt(depth * 18)
+            p0.paragraph_format.space_after = Pt(1)
+
+            # Col 1 — title
+            c1 = row.cells[1]
+            p1 = c1.paragraphs[0]
+            r1 = p1.add_run(title)
+            r1.bold = (depth == 0)
+            r1.font.size = Pt(11 if depth == 0 else (10 if depth == 1 else 9))
+            p1.paragraph_format.space_after = Pt(1)
+            if depth == 0:
+                r1.font.color.rgb = RGBColor(0x0d, 0x1f, 0x3c)
+
+            # Col 2 — page number (right-aligned)
+            c2 = row.cells[2]
+            p2 = c2.paragraphs[0]
+            p2.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            r2 = p2.add_run(page_str)
+            r2.font.size = Pt(9)
+            r2.font.color.rgb = RGBColor(0x6b, 0x72, 0x80)
+            p2.paragraph_format.space_after = Pt(1)
+
+            # Set column widths
+            try:
+                row.cells[0].width = Cm(1.5)
+                row.cells[1].width = Cm(12.5)
+                row.cells[2].width = Cm(1.5)
+            except Exception:
+                pass
+
+            for child in (node.get('children') or []):
+                _add_toc_row(child, depth + 1)
+
+        for node in toc_tree:
+            _add_toc_row(node, 0)
+
+        doc.add_paragraph()  # Spacing after static TOC
+
+    # ── 2. Word TOC field (auto-regenerates Heading 1-3 on open) ──
     paragraph = doc.add_paragraph()
-    
-    # Run 1: Begin Field
     run = paragraph.add_run()
     fldChar = OxmlElement('w:fldChar')
     fldChar.set(qn('w:fldCharType'), 'begin')
-    fldChar.set(qn('w:dirty'), 'true') # Force update on open
+    fldChar.set(qn('w:dirty'), 'true')
     run._r.append(fldChar)
-    
-    # Run 2: Field Code
+
     run = paragraph.add_run()
     instrText = OxmlElement('w:instrText')
     instrText.set(qn('xml:space'), 'preserve')
     instrText.text = 'TOC \\o "1-3" \\h \\z \\u'
     run._r.append(instrText)
-    
-    # Run 3: Separator
+
     run = paragraph.add_run()
     fldChar = OxmlElement('w:fldChar')
     fldChar.set(qn('w:fldCharType'), 'separate')
     run._r.append(fldChar)
-    
-    # Run 4: Placeholder Text (Visible before update)
-    run = paragraph.add_run("Right-click to update Table of Contents")
-    
-    # Run 5: End Field
+
+    run = paragraph.add_run("(Right-click → Update Field to refresh page numbers)")
+    run.font.color.rgb = RGBColor(0x9c, 0xa3, 0xaf)
+    run.font.italic = True
+    run.font.size = Pt(9)
+
     run = paragraph.add_run()
     fldChar = OxmlElement('w:fldChar')
     fldChar.set(qn('w:fldCharType'), 'end')
@@ -985,8 +1055,11 @@ def generate_complete_word_document(protocol_data):
 
     # ========== TABLE OF CONTENTS ==========
     doc.add_paragraph('Table of Contents', style='TOCHeading')
-    
-    create_toc(doc)
+
+    # Pass toc_tree from sections['0'] if present
+    sec0 = protocol_data.get('sections', {}).get('0', {})
+    toc_tree = sec0.get('toc_tree') or []
+    create_toc(doc, toc_tree=toc_tree)
 
     doc.add_page_break()
 
