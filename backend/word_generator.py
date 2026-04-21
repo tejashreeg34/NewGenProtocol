@@ -162,7 +162,7 @@ def add_header_footer(doc, pd):
         for p in header.paragraphs:
             p.text = ''
 
-        tbl = header.add_table(rows=1, cols=2, width=Cm(16))
+        tbl = header.add_table(rows=1, cols=3, width=Cm(16))
         tbl.autofit = True
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
 
@@ -174,31 +174,26 @@ def add_header_footer(doc, pd):
         tbl._tbl.tblPr.append(tbl_borders)
 
         cl = tbl.cell(0, 0).paragraphs[0]
-        cl.text = title
         cl.alignment = WD_ALIGN_PARAGRAPH.LEFT
         cl.style = doc.styles['Normal']
+        cl.add_run(title).add_break()
+        cl.add_run('Clinical Trial Protocol')
 
-        cr = tbl.cell(0, 1).paragraphs[0]
+        prot_no = pd.get('protocol_number', '')
+        cc = tbl.cell(0, 1).paragraphs[0]
+        cc.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cc.style = doc.styles['Normal']
+        if prot_no:
+            cc.add_run(f'Protocol No.: {prot_no}')
+
+        cr = tbl.cell(0, 2).paragraphs[0]
         cr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         cr.style = doc.styles['Normal']
-        cr.add_run(f'Version {version}').add_break()
-        cr.add_run(formatted_date)
-
-        # --- FOOTER ---
-        footer = sec.footer
-        for p in footer.paragraphs:
-            p.text = ''
-
-        p_f1 = footer.add_paragraph(f'{title} – Version {version} {formatted_date}')
-        p_f1.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_f1.style = doc.styles['Normal']
-        p_f1.paragraph_format.space_after = Pt(0)
-
-        p_f2 = footer.add_paragraph()
-        p_f2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_f2.style = doc.styles['Normal']
-
-        run_page = p_f2.add_run()
+        cr.add_run(f'Date: {formatted_date}').add_break()
+        cr.add_run(f'Ver.{version}').add_break()
+        
+        run_page = cr.add_run()
+        run_page.add_text("Page ")
         fc1 = OxmlElement('w:fldChar')
         fc1.set(qn('w:fldCharType'), 'begin')
         instr = OxmlElement('w:instrText')
@@ -209,6 +204,11 @@ def add_header_footer(doc, pd):
         run_page._r.append(fc1)
         run_page._r.append(instr)
         run_page._r.append(fc2)
+
+        # --- FOOTER ---
+        footer = sec.footer
+        for p in footer.paragraphs:
+            p.text = ''
 
 
 # ============================================================================
@@ -684,13 +684,22 @@ def add_soa_section(doc, pd):
                 cells[0].text = safe(str(proc))
                 cells[0].paragraphs[0].style = 'TableText'
                 for i, val in enumerate(checks):
-                    cells[i + 1].text = 'X' if val else ''
+                    cells[i + 1].text = 'X' if str(val) in ('1', 'True', 'true', 'X', 'x') else ''
                     cells[i + 1].paragraphs[0].style = 'TableText'
         elif isinstance(rows, list):
             for row in rows:
                 cells = table.add_row().cells
                 for i, val in enumerate(row):
-                    cells[i].text = safe(str(val))
+                    if i > 0:
+                        if str(val) == '1' or str(val).lower() == 'true':
+                            val_str = 'X'
+                        elif str(val) == '0' or str(val).lower() == 'false':
+                            val_str = ''
+                        else:
+                            val_str = str(val)
+                    else:
+                        val_str = str(val)
+                    cells[i].text = safe(val_str)
                     cells[i].paragraphs[0].style = 'TableText'
 
         for row in table.rows:
@@ -1024,10 +1033,26 @@ def generate_complete_word_document(protocol_data):
     doc.add_page_break()
 
     # ═══ SECTIONS 4–11 ═══
-    for sec_num in range(4, 12):
+    sec_keys = []
+    for k in sections.keys():
+        if k.isdigit() and int(k) > 3:
+            sec_keys.append(int(k))
+    if not sec_keys:
+        sec_keys = [4, 5, 6, 7, 8, 9, 10, 11]
+    else:
+        sec_keys = sorted(sec_keys)
+
+    for sec_num in sec_keys:
         sec_key = str(sec_num)
         template = next((s for s in TEMPLATE_STRUCTURE if s['id'] == sec_num), None)
-        sec_title = f"{sec_num} {template['title']}" if template else f"{sec_num} SECTION {sec_num}"
+        sec_data = sections.get(sec_key) or {}
+        
+        dynamic_title = sec_data.get('title', '').strip()
+        if dynamic_title:
+            sec_title = f"{sec_num} {dynamic_title}"
+        else:
+            sec_title = f"{sec_num} {template['title']}" if template else f"{sec_num} SECTION {sec_num}"
+            
         doc.add_heading(sec_title, level=1)
 
         sec_data = sections.get(sec_key) or {}

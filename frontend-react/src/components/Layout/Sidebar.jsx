@@ -55,7 +55,7 @@ const Sidebar = ({ activeTab, onTabChange, isOpen, setIsOpen }) => {
         >
           <Activity size={22} />
         </motion.div>
-        <span style={{ fontFamily: 'Outfit' }}>GenProtocol</span>
+        <span style={{ fontFamily: 'Outfit' }}>NextGen</span>
       </div>
       
       <nav style={{ flex: 1 }}>

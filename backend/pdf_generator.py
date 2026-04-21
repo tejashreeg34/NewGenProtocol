@@ -153,6 +153,7 @@ def draw_header_footer(canvas, doc, pd):
     title = sanitize(pd.get('protocol_title', 'Clinical Trial Protocol'))
     version = sanitize(str(pd.get('version_number', '1.0')))
     raw = pd.get('protocol_date', datetime.now().strftime('%Y-%m-%d'))
+    prot_no = sanitize(pd.get('protocol_number', ''))
     try:
         formatted_date = sanitize(datetime.strptime(raw, '%Y-%m-%d').strftime('%d %b %Y'))
     except ValueError:
@@ -161,15 +162,26 @@ def draw_header_footer(canvas, doc, pd):
     canvas.setFont('Helvetica', 9)
     canvas.setFillColor(colors.grey)
 
-    # Header
-    canvas.drawString(inch, h - 0.5 * inch, title)
-    canvas.drawRightString(w - inch, h - 0.5 * inch, f'Version {version}')
-    canvas.drawRightString(w - inch, h - 0.65 * inch, formatted_date)
+    from textwrap import wrap
+    wrapped_title = wrap(title, width=45) if title else ["Clinical Trial Protocol"]
+    if len(wrapped_title) > 3:
+        wrapped_title[2] += "..."
+        wrapped_title = wrapped_title[:3]
+    
+    y = h - 0.5 * inch
+    for line in wrapped_title:
+        canvas.drawString(inch, y, line)
+        y -= 12
+        
+    if "Clinical Trial Protocol" not in title:
+        canvas.drawString(inch, y, "Clinical Trial Protocol")
 
-    # Footer
-    footer_text = f'{title} - Version {version} {formatted_date}'
-    canvas.drawCentredString(w / 2, 0.5 * inch, footer_text)
-    canvas.drawCentredString(w / 2, 0.35 * inch, str(doc.page))
+    if prot_no:
+        canvas.drawCentredString(w / 2.0, h - 0.5 * inch, f'Protocol No.: {prot_no}')
+
+    canvas.drawRightString(w - inch, h - 0.5 * inch, f'Date: {formatted_date}')
+    canvas.drawRightString(w - inch, h - 0.5 * inch - 12, f'Ver.{version}')
+    canvas.drawRightString(w - inch, h - 0.5 * inch - 24, f'Page {doc.page}')
 
     canvas.restoreState()
 
@@ -553,7 +565,8 @@ def build_soa(story, pd, styles):
                     r_vals = [Paragraph(s(proc), styles['PTable'])]
                     for i in sub_indices:
                         val = checks[i] if i < len(checks) else False
-                        r_vals.append(Paragraph('X' if val else '', styles['PTable']))
+                        val_str = 'X' if str(val) in ('1', 'True', 'true', 'X', 'x') else ''
+                        r_vals.append(Paragraph(val_str, styles['PTable']))
                     data.append(r_vals)
             elif isinstance(rows, list):
                 # If rows is a list of lists [ [proc, v1, v2...], ... ]
@@ -563,7 +576,13 @@ def build_soa(story, pd, styles):
                     r_vals = [Paragraph(s(str(proc_val)), styles['PTable'])]
                     for i in sub_indices:
                         val = r[i + 1] if (i + 1) < len(r) else ''
-                        r_vals.append(Paragraph(s(str(val)), styles['PTable']))
+                        if str(val) == '1' or str(val).lower() == 'true':
+                            val_str = 'X'
+                        elif str(val) == '0' or str(val).lower() == 'false':
+                            val_str = ''
+                        else:
+                            val_str = str(val)
+                        r_vals.append(Paragraph(s(val_str), styles['PTable']))
                     data.append(r_vals)
             
             if len(data) > 1:
@@ -656,11 +675,26 @@ TEMPLATE_STRUCTURE = [
 
 def build_generic_sections(story, pd, styles):
     sections = pd.get('sections') or {}
+    sec_keys = []
+    for k in sections.keys():
+        if k.isdigit() and int(k) > 1 and int(k) != 3:
+            sec_keys.append(int(k))
+    if not sec_keys:
+        sec_keys = [2, 4, 5, 6, 7, 8, 9, 10, 11]
+    else:
+        sec_keys = sorted(sec_keys)
 
-    for sec_num in range(2, 12):
+    for sec_num in sec_keys:
         sec_key = str(sec_num)
         template = next((t for t in TEMPLATE_STRUCTURE if t['id'] == sec_num), None)
-        sec_title = f"{sec_num} {template['title']}" if template else f"{sec_num} SECTION {sec_num}"
+        sec_data = sections.get(sec_key) or {}
+        # Use dynamic title if available from sections, else fallback to template
+        dynamic_title = sec_data.get('title', '').strip()
+        
+        if dynamic_title:
+            sec_title = f"{sec_num} {dynamic_title}"
+        else:
+            sec_title = f"{sec_num} {template['title']}" if template else f"{sec_num} SECTION {sec_num}"
 
         story.append(h1(sec_title, styles))
 
@@ -726,13 +760,21 @@ def build_generic_sections(story, pd, styles):
         story.append(PageBreak())
 
 
-# ============================================================================
-# MAIN ENTRY POINT
-# ============================================================================
+from reportlab.platypus.tableofcontents import TableOfContents
+
+class MyDocTemplate(SimpleDocTemplate):
+    def afterFlowable(self, flowable):
+        if flowable.__class__.__name__ == 'Paragraph':
+            style_name = flowable.style.name
+            if style_name in ('PH1', 'PH2', 'PH3'):
+                text = flowable.getPlainText()
+                # Determine level: PH1=0, PH2=1, PH3=2
+                level = int(style_name[-1]) - 1
+                self.notify('TOCEntry', (level, text, self.page))
 
 def generate_pdf_document(protocol_data):
     """Generate PDF document matching the Prot_1 reference structure."""
-    pd_data = protocol_data  # alias
+    pd_data = protocol_data
 
     output_dir = 'generated_docs'
     os.makedirs(output_dir, exist_ok=True)
@@ -741,7 +783,7 @@ def generate_pdf_document(protocol_data):
     filename = f'protocol_{version}_{timestamp}.pdf'
     filepath = os.path.join(output_dir, filename)
 
-    doc = SimpleDocTemplate(
+    doc = MyDocTemplate(
         filepath,
         pagesize=letter,
         rightMargin=inch,
@@ -776,14 +818,14 @@ def generate_pdf_document(protocol_data):
     story.append(PageBreak())
 
     # ═══ TABLE OF CONTENTS ═══
-    story.append(h1('TABLE OF CONTENTS', styles))
-    toc_items = ['STATEMENT OF COMPLIANCE', 'PROTOCOL APPROVAL & AGREEMENT', '1 PROTOCOL SUMMARY']
-    for t in TEMPLATE_STRUCTURE:
-        if t['id'] > 1:
-            toc_items.append(f"{t['id']} {t['title']}")
-    toc_items.append('APPENDICES')
-    for item in toc_items:
-        story.append(bullet(item, styles))
+    story.append(Paragraph('TABLE OF CONTENTS', styles['PH1']))
+    toc = TableOfContents()
+    toc.levelStyles = [
+        ParagraphStyle(fontName='Helvetica-Bold', fontSize=10, name='TOCHeading1', leftIndent=0, firstLineIndent=0, spaceBefore=4, leading=14),
+        ParagraphStyle(fontName='Helvetica', fontSize=10, name='TOCHeading2', leftIndent=20, firstLineIndent=0, spaceBefore=0, leading=14),
+        ParagraphStyle(fontName='Helvetica', fontSize=10, name='TOCHeading3', leftIndent=40, firstLineIndent=0, spaceBefore=0, leading=14),
+    ]
+    story.append(toc)
     story.append(PageBreak())
 
     # ═══ SECTION 1: PROTOCOL SUMMARY ═══
@@ -814,7 +856,7 @@ def generate_pdf_document(protocol_data):
                 story.append(para(app_content, styles))
 
     hf = partial(draw_header_footer, pd=pd_data)
-    doc.build(story, onFirstPage=hf, onLaterPages=hf)
+    doc.multiBuild(story, onFirstPage=hf, onLaterPages=hf)
     return filepath
 
 
